@@ -22,7 +22,7 @@ from schema.mmkk import WorkInfo, User, WTMPDomain, MKWenZhang, AddGolds, MMKKCo
 from utils import *
 from utils.push_utils import WxPusher
 
-logger = mmkk_logger
+logger = Logger("😸阅读")
 
 
 class APIS:
@@ -93,7 +93,9 @@ class MMKK:
 
         logger.info(f"【脚本信息】\n> 作者：{self.CURRENT_SCRIPT_AUTHOR}\n> 版本号：{self.CURRENT_SCRIPT_VERSION}\n")
         logger.info(
-            f"【配置信息】\n> 账号数量：{len(self.accounts)}\n> 账号队列: {[name for name in self.accounts.keys()]}\n")
+            f"【任务配置信息】\n> 账号数量：{len(self.accounts)}\n> 账号队列: {[name for name in self.accounts.keys()]}\n> 配置来源: {config_data.source}\n")
+
+        logger.info("睡眠1.5秒，任务即将开始...")
         time.sleep(1.5)
         # 入口链接
         self.entry_url = None
@@ -137,7 +139,7 @@ class MMKK:
         try:
             self.__init_data()
             self.__start_read()
-        except PauseReading | ReachedLimit as e:
+        except (PauseReading, ReachedLimit) as e:
             logger.war(f"🔘 {e}")
         except StopRun as e:
             logger.error(e)
@@ -263,7 +265,10 @@ class MMKK:
         # 获取加载页面
         load_homepage = self.__request_load_page(wtmpDomain)
         v = self.__prepare_read_before(load_homepage)
+        i = 0
         while True:
+            i += 1
+            logger.info(f"本轮第 {i} 次获取阅读文章链接")
             time.sleep(1.5)
             params = self.__build_request_article_args(self.read_client.base_url.netloc, timestamp(13), v)
             article_res_model = self.__request_article_for_link(params)
@@ -325,8 +330,7 @@ class MMKK:
             "time": t
         }
         response = self.read_client.get(APIS.ADDGOLDS, params=params)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"增加金币，read_client 用的请求头为：{response.request.headers}")
+        logger.response("增加金币 read_client", response)
         res_json = None
         try:
             res_json = response.json()
@@ -356,9 +360,7 @@ class MMKK:
         self.empty_client.headers = self.__build_base_headers()
         # 请求文章内容（源代码）
         response = self.empty_client.get(article_url)
-        article_html = response.text
-        logger.debug(f"请求的链接为: {response.request.url}")
-        logger.debug(f"article_html，empty_client 用的请求头为：{response.request.headers}")
+        logger.response("获取文章内容 empty_client", response)
 
     @staticmethod
     def __parse_cookie(cookie_str: str) -> dict:
@@ -435,8 +437,7 @@ class MMKK:
         })
 
         response = self.empty_client.get(article_js_url)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"article_js_url，empty_client 用的请求头为：{response.request.headers}")
+        logger.response("article_js_url empty_client", response)
 
         if md5(response.text) != self.ARTICLE_JS_CODE_MD5:
             raise CodeChanged()
@@ -475,8 +476,7 @@ class MMKK:
         try:
             # 开始发起请求，获取阅读文章链接
             response = self.read_client.get(APIS.MKWENZHANGS, params=params)
-            logger.debug(f"请求链接为: {response.url}")
-            logger.debug(f"获取阅读文章的跳转链接，read_client 用的请求头为：{response.request.headers}")
+            logger.response("获取阅读文章的跳转链接 read_client", response)
             res_json = response.json()
             if res_json.get("errcode") == 407:
                 msg = res_json.get('msg')
@@ -489,9 +489,7 @@ class MMKK:
             logger.info(f"获取阅读文章链接成功：{article_res_model.data.link}")
             # self.wx_pusher_link(article_res_model.data.link)
             return article_res_model
-        except PauseReading | ReachedLimit as e:
-            raise e
-        except ReadValid as e:
+        except (ReachedLimit, PauseReading, ReadValid) as e:
             raise e
         except ValidationError as e:
             logger.error(f"发生类型验证错误，请截图下方报错原因并提交给作者，以供改进: {e}")
@@ -520,8 +518,7 @@ class MMKK:
         :return: 文章阅读页面源代码
         """
         response = self.read_client.get(wtmpDomain.data.domain)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"获取“正在加载”页面，read_client 用的请求头为：{response.request.headers}")
+        logger.response("正在加载页面 read_client", response)
         html = response.text
         return html
 
@@ -533,8 +530,7 @@ class MMKK:
         """
         self.base_client.cookies = self.__parse_cookie(f"ejectCode={self.ejectCode}; {self.origin_cookie}")
         response = self.base_client.post(APIS.WTMPDOMAIN)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"获取文章阅读二维码链接，base_client 用的请求头为：{response.request.headers}")
+        logger.response("获取文章阅读二维码链接，base_client", response)
         try:
             res_json = response.json()
             wtmpDomain = WTMPDomain.model_validate(res_json)
@@ -554,8 +550,7 @@ class MMKK:
             "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"
         })
         response = self.base_client.get(APIS.WORKINFO)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"获取文章阅读篇数和金币，base_client 用的请求头为：{response.request.headers}")
+        logger.response("获取文章阅读篇数和金币，base_client", response)
         try:
             res_json = response.json()
             workInfo = WorkInfo.model_validate(res_json)
@@ -574,8 +569,7 @@ class MMKK:
             "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"
         })
         response = self.base_client.get(APIS.USER)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"获取用户信息，base_client 用的请求头为：{response.request.headers}")
+        logger.response("获取用户信息，base_client", response)
 
         try:
             res_json = response.json()
@@ -594,8 +588,7 @@ class MMKK:
         :return:
         """
         response = self.base_client.get(f"{path}?{query}")
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"请求首页，base_client 用的请求头为：{response.request.headers}")
+        logger.response("请求首页 base_client", response)
 
         homepage_html = response.text
         if "eject" not in self.origin_cookie:
@@ -616,8 +609,7 @@ class MMKK:
         })
 
         response = self.empty_client.get(entry_url)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"请求入口链接，empty_client 用的请求头为：{response.request.headers}")
+        logger.response("请求入口链接，empty_client", response)
 
         if response.status_code != 302:
             raise Exception(f"请求入口链接失败")
@@ -632,8 +624,7 @@ class MMKK:
         })
 
         response = self.base_client.get(redirect_url)
-        logger.debug(f"请求链接为: {response.url}")
-        logger.debug(f"请求入口链接，base_client 用的请求头为：{response.request.headers}")
+        logger.response("请求入口链接，base_client", response)
 
         # 再次获取链接
         home_url = response.headers.get("Location")
@@ -675,9 +666,7 @@ class MMKK:
             "pname": self.aliName
         }
         response = self.withdraw_client.post(APIS.GETWITHDRAW, data=payload)
-        logger.debug(f"链接地址：{response.request.url}")
-        logger.debug(f"人民币提现, withdraw_client 请求头为：{response.request.headers}")
-
+        logger.response("提现 withdraw_client", response)
         try:
             res_json = response.json()
             logger.info(f"提现结果：{res_json['msg']}")
@@ -696,8 +685,7 @@ class MMKK:
             "gold": str(gold)
         }
         response = self.withdraw_client.post(APIS.GETGOLD, data=payload)
-        logger.debug(f"链接地址：{response.request.url}")
-        logger.debug(f"兑换金币, withdraw_client 请求头为：{response.request.headers}")
+        logger.response("金币兑换 withdraw_client", response)
         try:
             res_json = response.json()
             # 代码没写完，测试号都快封完了
@@ -720,7 +708,7 @@ class MMKK:
             "Upgrade-Insecure-Requests": "1"
         })
         response = self.base_client.get(APIS.WITHDRAW)
-        logger.debug(f"获取提现页面地址，base_client 请求头为: {response.request.headers}")
+        logger.response("提现页面 base_client", response)
         return response.text
 
     def wx_pusher_link(self, link) -> bool:

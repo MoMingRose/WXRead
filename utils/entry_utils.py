@@ -156,29 +156,24 @@ class EntryUrl:
     @classmethod
     def get_klrd_entry_url(cls, url: str = None, invite_url: str = None) -> str:
         if url is None:
-            url = "https://code.sywjmlou.com.cn/"
-
-        if invite_url is None:
-            invite_url = "http://o1up.ieazq.shop/haobaobao/auth/c5aab76cbaa0d0c80ec1ade47b3ce520"
-
+            url = "http://m.fbjcoru.cn/entry?upuid=1316875"
         return EntryUrl({
             "name": "可乐读书",
             "url": url,
-            "invite_url": invite_url
+            "reg": r"(入口\d+).*?(http\S+?(?=\s|;|`))",
+            "type": 1
         }).all_entry_url
 
     @classmethod
     def get_yyrd_entry_url(cls, url: str = None, invite_url: str = None) -> str:
         if url is None:
-            url = "https://www.filesmej.cn/"
-
-        if invite_url is None:
-            invite_url = "http://9bk2.lvk72.shop/yunonline/v1/auth/5729acffb4b05596aef08e18eaf8a7cd?codeurl=9bk2.lvk72.shop&codeuserid=2&time=1711531311"
+            url = "http://h5.eqlrqqt.cn/entry/index5?upuid=2068422"
 
         return EntryUrl({
             "name": "鱼儿阅读",
             "url": url,
-            "invite_url": invite_url
+            "reg": r"url_h51[.\s=']*(http\S+)'",
+            "type": 1
         }).all_entry_url
 
     @classmethod
@@ -227,4 +222,4 @@ class EntryUrl:
 
 
 if __name__ == "__main__":
-    print(EntryUrl.get_all_entry_url())
+    print(EntryUrl.get_klrd_entry_url())

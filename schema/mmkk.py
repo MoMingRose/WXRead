@@ -45,12 +45,14 @@ class BaseMMKKConfig(CommonConfig):
     delay: DelayConfig
     appToken: str = Field(..., description="WxPusher推送通知的appToken")
     debug: bool = Field(False, description="是否开启调试模式")
+    # source: str = Field("mmkk.yaml", description="配置来源")
 
 
 # 通过 create_model() 方法创建动态键模型
 MMKKConfig: Type[BaseModel] = create_model(
     'MMKKConfig',
     account_data=(Dict[str | int, MMKKAccount], {}),
+    source=(str, "mmkk.yaml"),
     __base__=BaseMMKKConfig
 )
 

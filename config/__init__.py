@@ -21,11 +21,11 @@ def load_mmkk_config() -> MMKKConfig:
     """
     path = os.path.join(root_dir, "mmkk.yaml")
     if not os.path.exists(path):
-        raise FileNotFoundError(f"猫猫看看阅读配置文件不存在，请创建（参考example.yaml文件）：{path}")
+        raise FileNotFoundError(f"猫猫看看阅读配置文件不存在，请在config文件夹下创建（参考example.yaml文件）：{path}")
     with open(path, "r", encoding="utf-8") as fp:
         data = yaml.safe_load(fp)
 
-    dynamic_config_data = MMKKConfig(**data)
+    dynamic_config_data = MMKKConfig(**data, source=path)
     return dynamic_config_data
 
 

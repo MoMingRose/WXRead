@@ -8,5 +8,3 @@
 from .entry_utils import EntryUrl
 from .global_utils import *
 from .logger_utils import Logger
-
-mmkk_logger = Logger("😸阅读")
