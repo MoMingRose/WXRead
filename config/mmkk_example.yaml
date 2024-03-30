@@ -1,0 +1,59 @@
+# 打印调试信息，默认为 false
+debug: false
+# WxPusher 服务的 appToken，官网地址 https://wxpusher.zjiecode.com/docs/#/
+appToken: ""
+# 全局延迟配置（可单独配置，直接在对应的账号中添加相同的格式即可）
+delay:
+  # 模拟阅读时间，默认15-20
+  read_delay:
+    - 10
+    - 20
+  # 推送检测文章后的等待时间
+  push_delay:
+    - 19
+# 全局提现金额（单位：元）（可单独配置，直接在对应的账号中添加相同的格式即可）
+withdraw: 0.9
+# 全局的支付宝提现账号（可单独配置）
+# 默认""表示使用微信提现方式）
+aliName: ""
+aliAccount: ""
+# 要跑的账号数据
+account_data:
+  # 账号名称（可以自定义）
+  账号1号:
+    # 必填参数
+    cookie: ""
+    # 必填参数（用于推送检测文章链接）
+    uid: ""
+    # 可选参数
+    ua:
+    # 可选参数（不填，则采用全局配置）
+    #    withdraw: 0
+    # 可选参数（不填，则采用全局配置）
+    #    aliName: "支付宝账户姓名"
+    # 可选参数（不填，则采用全局配置）
+    #    aliAccount: "支付宝账号"
+    # 可选参数
+  #    delay:
+  #      read_delay:
+  #        - 10
+  #        - 20
+  #      push_delay:
+  #        - 19
+# 用于漏网之鱼检测（数据来源：幻生大佬）
+biz_data:
+  - "MzkxNTE3MzQ4MQ=="
+  - "Mzg5MjM0MDEwNw=="
+  - "MzUzODY4NzE2OQ=="
+  - "MzkyMjE3MzYxMg=="
+  - "MzkxNjMwNDIzOA=="
+  - "Mzg3NzUxMjc5Mg=="
+  - "Mzg4NTcwODE1NA=="
+  - "Mzk0ODIxODE4OQ=="
+  - "Mzg2NjUyMjI1NA=="
+  - "MzIzMDczODg4Mw=="
+  - "Mzg5ODUyMzYzMQ=="
+  - "MzU0NzI5Mjc4OQ=="
+  - "Mzg5MDgxODAzMg=="
+  - "MzIzMDczODg4Mw=="
+  - "MzkxNDU1NDEzNw=="
