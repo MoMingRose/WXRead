@@ -8,7 +8,6 @@
 import logging
 import os
 import threading
-from concurrent.futures import ThreadPoolExecutor
 
 from colorama import Fore, Style
 from httpx import Response
@@ -196,7 +195,7 @@ class Logger:
                 try:
                     content = json.loads(content)
                     content = json.dumps(content, ensure_ascii=False, indent=2)
-                except json.decoder.JSONDecodeError:
+                except json.JSONDecodeError:
                     if not print_text_all:
                         # 判断长度是否超过1000
                         if len(content) > print_text_limit:

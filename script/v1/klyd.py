@@ -326,7 +326,7 @@ class KLYD:
                 logger.info(f"🟢 提现成功! 预计到账 {amount / 100} 元")
             else:
                 logger.info(f"🟡 提现失败，原因：{withdraw_result['msg']}")
-        except (json.decoder.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError) as e:
             logger.exception(f"🟡 提现失败，原因：{e}，原始数据: {withdraw_result}")
 
     def __request_withdrawal_for_userinfo(self) -> RspWithdrawal | dict:
