@@ -133,10 +133,6 @@ class KLYDV2(WxReadTaskBase):
         except (FailedPassDetect, WithdrawFailed) as e:
             self.logger.war(e)
             self.is_need_withdraw = False
-        except Exception as e:
-            self.is_need_withdraw = False
-            self.logger.exception(e)
-            sys.exit(0)
         finally:
             if self.is_need_withdraw:
                 self.__request_withdraw()
