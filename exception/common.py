@@ -36,6 +36,11 @@ class Exit(Exception):
     def __init__(self):
         super().__init__("🔴 出现不可挽回异常，退出脚本")
 
+
 class FailedPushTooManyTimes(Exception):
     def __init__(self):
         super().__init__("🔴 超过最大推送失败次数，请配置好相关数据!")
+
+class NoSuchArticle(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)

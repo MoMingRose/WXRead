@@ -15,7 +15,7 @@ from httpx import URL
 
 from config import load_klyd_config
 from exception.common import PauseReadingWaitNext, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange, \
-    FailedPushTooManyTimes
+    FailedPushTooManyTimes, NoSuchArticle
 from exception.klyd import FailedPassDetect, \
     RegExpError, WithdrawFailed
 from schema.klyd import KLYDConfig, RspRecommend, RspReadUrl, RspDoRead, ArticleInfo, RspWithdrawal, RspWithdrawalUser
@@ -137,7 +137,7 @@ class KLYDV2(WxReadTaskBase):
             self.logger.war(e)
             self.is_need_withdraw = False
             sys.exit(0)
-        except (FailedPassDetect, WithdrawFailed) as e:
+        except (FailedPassDetect, WithdrawFailed, NoSuchArticle) as e:
             self.logger.war(e)
             self.is_need_withdraw = False
         finally:
@@ -263,6 +263,7 @@ class KLYDV2(WxReadTaskBase):
         is_sleep = False
         is_need_push = False
         is_pushed = False
+        retry_count = 2
         while True:
             res_model = self.__request_for_do_read_json(full_api_path, is_sleep=is_sleep, is_pushed=is_pushed)
             ret_count = res_model.ret_count
@@ -273,6 +274,20 @@ class KLYDV2(WxReadTaskBase):
                 else:
                     raise FailedPassDetect("🔴 貌似检测失败了，具体请查看上方报错原因")
             article_url = res_model.url
+            if ret_count == 1 and article_url is None:
+                if retry_count == 0:
+                    raise NoSuchArticle("🟡 当前账号没有文章链接返回，为避免黑号和封号，已停止当前账号运行")
+                is_sleep = True
+                if ret_count >= 0:
+                    self.logger.war(f"🟡 返回的阅读文章链接为None, 尝试重新请求")
+                    retry_count -= 1
+                    continue
+                full_api_path = self.__build_do_read_url_path(
+                    part_api_path,
+                    jkey=res_model.jkey
+                )
+                # is_sleep = True
+                # continue
             if article_url is None:
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
 

@@ -196,6 +196,11 @@ class RspDoRead(BaseModel):
                   "jkey": "MDAwMDAwMDAwM......",
                   "url": "https://mp.weixin.qq.com/s?__biz=Mzg2OTYyNDY1OQ==&mid=2247649861&idx=1&sn=f0216ebeec1edb6c30ba1ab54a6fec7d&scene=0#wechat_redirect"
                 }
+            - 未知状态
+                {
+                  "jkey": "MDAwMDAwMDAwMH6et2yHiryRsqu64L67gKOXfIvLlWra145qlc2LjI2BlKDGmIZmypO5qtTXu6iMaoh6nbSIfdLNmGvMmA",
+                  "url": null
+                }
             - 检测失败
                 {
                   "success_msg": "检测未通过",

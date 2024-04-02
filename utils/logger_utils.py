@@ -138,6 +138,9 @@ class Logger:
         lock.acquire()
         if isinstance(msg, BaseModel):
             msg = msg.__str__()
+        elif isinstance(msg, Exception):
+            msg = str(msg)
+
         level_name = logging.getLevelName(level)
         level_color = getattr(LogColors, level_name)
         msg = msg.replace("{{log-color}}", level_color)

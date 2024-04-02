@@ -55,9 +55,9 @@ class WxReadTaskBase(ABC):
         # 构建基本请求头
         self.base_headers = self.build_base_headers()
         # 构建主线程客户端
-        self.main_client = httpx.Client(headers=self.base_headers, timeout=5)
+        self.main_client = httpx.Client(headers=self.base_headers, timeout=10)
         # # 构建基本客户端
-        # self.base_client = httpx.Client(headers=self.base_headers, timeout=5)
+        # self.base_client = httpx.Client(headers=self.base_headers, timeout=10)
 
         self.thread2name = {
             "is_log_response": self.is_log_response,
@@ -124,6 +124,7 @@ class WxReadTaskBase(ABC):
             self.run(name)
         except StopReadingNotExit as e:
             self.logger.info(f"🔘 {e}")
+            return
         except (RspAPIChanged, ExitWithCodeChange) as e:
             self.logger.error(e)
             sys.exit(0)
@@ -261,7 +262,7 @@ class WxReadTaskBase(ABC):
         try:
             self.lock.acquire()
             if client is None:
-                client = httpx.Client(headers=self.build_base_headers(self.account_config), timeout=5)
+                client = httpx.Client(headers=self.build_base_headers(self.account_config), timeout=10)
                 flag = True
             else:
                 client = client
@@ -305,6 +306,9 @@ class WxReadTaskBase(ABC):
         except httpx.ReadTimeout as e:
             self.logger.error(f"请求超时, 剩余重试次数：{retry_count}")
             if retry_count > 0:
+                if flag:
+                    client.close()
+                self.lock.release()
                 return self._request(method, url, prefix, *args, client=client, update_headers=update_headers,
                                      ret_types=ret_types, retry_count=retry_count - 1, **kwargs)
             else:
@@ -387,7 +391,7 @@ class WxReadTaskBase(ABC):
         if client is None:
             if headers is None:
                 headers = self.build_base_headers(self.account_config)
-            client = httpx.Client(headers=headers, timeout=5, verify=verify)
+            client = httpx.Client(headers=headers, timeout=10, verify=verify)
             self._cache[client_name] = client
         return client
 
