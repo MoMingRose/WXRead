@@ -462,7 +462,7 @@ class KLYDV2(WxReadTaskBase):
             if msg := infoView.msg:
                 if "下一批" in msg:
                     raise PauseReadingWaitNext(msg)
-                elif "阅读限制" in msg:
+                elif "阅读限制" in msg or "任务上限" in msg:
                     raise StopReadingNotExit(msg)
 
     def __request_for_read_url(self) -> URL:
