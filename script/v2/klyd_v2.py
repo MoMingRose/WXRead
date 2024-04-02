@@ -276,7 +276,7 @@ class KLYDV2(WxReadTaskBase):
             article_url = res_model.url
             if ret_count == 1 and article_url is None:
                 if retry_count == 0:
-                    raise NoSuchArticle("🟡 当前账号没有文章链接返回，为避免黑号和封号，已停止当前账号运行")
+                    raise NoSuchArticle("🟡 当前账号没有文章链接返回，为避免黑号和封号，已停止当前账号运行，请等待5至6分钟再运行或先手动阅读几篇再运行!")
                 is_sleep = True
                 if ret_count >= 0:
                     self.logger.war(f"🟡 返回的阅读文章链接为None, 尝试重新请求")
