@@ -110,18 +110,18 @@ class KLYDV2(WxReadTaskBase):
             # 获取推荐数据（里面包含当前阅读的信息）
             recommend_data = self.__request_recommend_json(homepage_url)
             self.__print_recommend_data(recommend_data)
-            # 获取阅读链接
-            self.read_url: URL = self.__request_for_read_url()
+            # 获取加载页面跳转链接
+            self.load_page_url: URL = self.__request_for_read_url()
+            self.logger.info(f"获取加载页链接成功: {self.load_page_url}")
             # 获取加载页面源代码
-            read_load_page_html: str = self.__request_for_read_load_page(self.read_url)
+            read_load_page_html: str = self.__request_for_read_load_page(self.load_page_url)
             forstr, zs, r_js_path, r_js_version = self.__parse_read_load_page(read_load_page_html)
             self.logger.debug(f"r_js_path：{r_js_path}")
             self.logger.debug(f"r_js_version：{r_js_version}")
             if self.CURRENT_R_JS_VERSION != r_js_version:
                 raise ExitWithCodeChange("r_js_version")
-
             # 设置read_client的base_url
-            self.read_client.base_url = f"{self.read_url.scheme}://{self.read_url.host}"
+            self.read_client.base_url = f"{self.load_page_url.scheme}://{self.load_page_url.host}"
             r_js_code = self.__request_r_js_code(r_js_path)
             if self.R_JS_CODE_MD5 != md5(r_js_code):
                 raise ExitWithCodeChange("r_js_code")
@@ -325,7 +325,7 @@ class KLYDV2(WxReadTaskBase):
                 time.sleep(random.randint(1, 3))
                 self.__request_for_read_url()
             else:
-                raise Exception(f"🔴 do_read 出现未知错误，ret_count={ret_count}")
+                is_sleep = True
 
             # 打印文章内容
             self.__print_article_info(res_model.url)
@@ -433,7 +433,7 @@ class KLYDV2(WxReadTaskBase):
             "请求r.js源代码, read_client",
             client=self.read_client,
             update_headers={
-                "Referer": self.read_url.__str__(),
+                "Referer": self.load_page_url.__str__(),
             }
         )
 
@@ -553,12 +553,12 @@ class KLYDV2(WxReadTaskBase):
         self._cache[f"iu_{self.ident}"] = value
 
     @property
-    def read_url(self):
-        return self._cache.get(f"read_url_{self.ident}")
+    def load_page_url(self):
+        return self._cache.get(f"load_page_url_{self.ident}")
 
-    @read_url.setter
-    def read_url(self, value):
-        self._cache[f"read_url_{self.ident}"] = value
+    @load_page_url.setter
+    def load_page_url(self, value):
+        self._cache[f"load_page_url_{self.ident}"] = value
 
 
 if __name__ == '__main__':
