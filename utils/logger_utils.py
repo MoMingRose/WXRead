@@ -34,37 +34,43 @@ class LogColors:
 
 
 class NestedLogColors:
-    @staticmethod
-    def blue(content: str):
-        return Fore.BLUE + content + Style.RESET_ALL + "{{log-color}}"
 
     @staticmethod
-    def red(content: str):
-        return Fore.RED + content + Style.RESET_ALL + "{{log-color}}"
+    def colorize(content: str, net_color, log_color: str = None):
+        color = "{{log-color}}" if log_color is None else getattr(Fore, log_color.upper())
+        return net_color + content + Style.RESET_ALL + color
 
     @staticmethod
-    def green(content: str):
-        return Fore.GREEN + content + Style.RESET_ALL + "{{log-color}}"
+    def white(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.WHITE, color)
 
     @staticmethod
-    def yellow(content: str):
-        return Fore.YELLOW + content + Style.RESET_ALL + "{{log-color}}"
+    def blue(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.BLUE, color)
 
     @staticmethod
-    def white(content: str):
-        return Fore.WHITE + content + Style.RESET_ALL + "{{log-color}}"
+    def red(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.RED, color)
 
     @staticmethod
-    def black(content: str):
-        return Fore.BLACK + content + Style.RESET_ALL + "{{log-color}}"
+    def green(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.GREEN, color)
 
     @staticmethod
-    def cyan(content: str):
-        return Fore.CYAN + content + Style.RESET_ALL + "{{log-color}"
+    def yellow(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.YELLOW, color)
 
     @staticmethod
-    def magenta(content: str):
-        return Fore.MAGENTA + content + Style.RESET_ALL + "{{log-color}"
+    def black(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.BLACK, color)
+
+    @staticmethod
+    def cyan(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.CYAN, color)
+
+    @staticmethod
+    def magenta(content: str, color: str = None):
+        return NestedLogColors.colorize(content, Fore.MAGENTA, color)
 
 
 class Logger:
@@ -227,6 +233,10 @@ class ThreadLogger(Logger):
         finally:
             lock.release()
 
+    @property
+    def is_log_response(self):
+        return self.thread2name.get('is_log_response', False)
+
     def info(self, msg, *args, **kwargs):
         super().info(msg, *args, prefix=self.name, **kwargs)
 
@@ -243,6 +253,8 @@ class ThreadLogger(Logger):
         super().cri(msg, *args, prefix=self.name, **kwargs)
 
     def response(self, prefix: str, response: Response, *args, **kwargs):
+        if not self.is_log_response:
+            return
         super().response(
             prefix,
             response,

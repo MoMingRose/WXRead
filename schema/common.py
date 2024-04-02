@@ -25,7 +25,6 @@ class CommonConfig(BaseModel):
     delay: CommonDelayConfig = Field(CommonDelayConfig(), description="阅读延迟时间（单位: 秒）")
     wait_next_read: bool | None = Field(None, description="是否自动等待下批阅读")
 
-
 class CommonPartConfig(CommonConfig):
     """相同的局部配置（账号配置）"""
     uid: str
@@ -39,3 +38,4 @@ class CommonGlobalConfig(CommonConfig):
         description="配置全局优先策略（仅限全局配置，不包括账号局部配置） 1: 全局优先 2: 任务配置优先）"
     )
     max_thread_count: int = Field(1, description="线程池中的最大线程数")
+    is_log_response: bool | None = Field(None, description="是否打印响应日志")

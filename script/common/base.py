@@ -59,7 +59,9 @@ class WxReadTaskBase(ABC):
         # # 构建基本客户端
         # self.base_client = httpx.Client(headers=self.base_headers, timeout=30)
 
-        self.thread2name = {}
+        self.thread2name = {
+            "is_log_response": self.is_log_response,
+        }
         self.logger = ThreadLogger(logger_name, thread2name=self.thread2name)
 
         self.init_fields()
@@ -70,9 +72,9 @@ class WxReadTaskBase(ABC):
         else:
             thread_count = len(self.accounts)
 
-        self.logger.info(NestedLogColors.white(
+        self.logger.info(NestedLogColors.blue(
             "\n".join([
-                "【脚本信息】",
+                f"{NestedLogColors.black('【脚本信息】', 'blue')}",
                 f"> 作者：{self.CURRENT_SCRIPT_AUTHOR}",
                 f"> 版本号：{self.CURRENT_SCRIPT_VERSION}",
                 f"> 任务名称：{self.CURRENT_TASK_NAME}",
@@ -81,9 +83,9 @@ class WxReadTaskBase(ABC):
             ])
         ))
 
-        self.logger.info(NestedLogColors.white(
+        self.logger.info(NestedLogColors.blue(
             "\n".join([
-                f"【任务配置信息】",
+                f"{NestedLogColors.black('【任务配置信息】', 'blue')}",
                 f"> 账号数量：{len(self.accounts)}",
                 f"> 账号队列: {[name for name in self.accounts.keys()]}",
                 f"> 最大线程数：{thread_count}",
@@ -422,6 +424,11 @@ class WxReadTaskBase(ABC):
     @property
     def cookie_dict(self) -> dict:
         return {key: value.value for key, value in SimpleCookie(self.origin_cookie).items()}
+
+    @property
+    def is_log_response(self):
+        ret = self.config_data.is_log_response
+        return ret if ret is not None else False
 
     def build_base_headers(self, account_config: KLYDConfig = None):
         if account_config is not None:
