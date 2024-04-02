@@ -34,7 +34,7 @@ class KLYDAccount(CommonPartConfig, CommonKLYDConfig):
 
 class BaseKLYDGlobalConfig(CommonGlobalConfig, CommonKLYDConfig):
     """可乐阅读配置（全局配置）"""
-    pass
+    biz_data: list
 
 
 KLYDConfig: Type[BaseModel] = create_model(
@@ -84,7 +84,7 @@ class RspRecommendInfoView(BaseModel):
     rest: float
     status: int = Field(..., description='''
         当前阅读状态，目前已知：
-        当rest = 0 且 status = 1 时：等待下一批
+        当rest = 0 且 status = 1 时：等待下一批、任务上限
         当rest = 4 且 status = 1 时: 等待开始阅读
         当rest = 1 且 status = 3 时：不确定此状态
         
@@ -190,7 +190,7 @@ class RspDoRead(BaseModel):
         响应数据中的键值对个数
 
         经过粗略的观察，一般来说：
-        返回2个，分两种情况，需要检测、检测失败
+        返回2个，可能出现以下情况:
             - 需要检测
                 {
                   "jkey": "MDAwMDAwMDAwM......",
@@ -199,6 +199,15 @@ class RspDoRead(BaseModel):
             - 检测失败
                 {
                   "success_msg": "检测未通过",
+                  "url": "close"
+                }
+            - 阅读完成
+                {
+                  "success_msg": "本轮阅读已完成",
+                  "url": "close"
+                }
+                {
+                  "success_msg": "今天已达到阅读限制，请勿多个平台阅读",
                   "url": "close"
                 }
         返回3个，分两种情况：检测失败、已通过检测并获得了奖励
