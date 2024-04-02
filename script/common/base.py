@@ -149,9 +149,9 @@ class WxReadTaskBase(ABC):
             self.logger.exception(e)
             sys.exit(0)
         finally:
-            self.base_client.close()
-            self.read_client.close()
-            self.article_client.close()
+            self.base_client = None
+            self.read_client = None
+            self.article_client = None
 
     def start_queue(self):
         while not self.wait_queue.empty():
@@ -334,13 +334,37 @@ class WxReadTaskBase(ABC):
     def base_client(self):
         return self._get_client("base")
 
+    @base_client.setter
+    def base_client(self, value):
+        if value is None:
+            self.base_client.close()
+            self._cache.pop(f"base_client_{self.ident}", None)
+        else:
+            self._cache[f"base_client_{self.ident}"] = value
+
     @property
     def read_client(self):
         return self._get_client("read")
 
+    @read_client.setter
+    def read_client(self, value):
+        if value is None:
+            self.read_client.close()
+            self._cache.pop(f"read_client_{self.ident}", None)
+        else:
+            self._cache[f"read_client_{self.ident}"] = value
+
     @property
     def article_client(self):
         return self._get_client("article", verify=False)
+
+    @article_client.setter
+    def article_client(self, value):
+        if value is None:
+            self.article_client.close()
+            self._cache.pop(f"article_client_{self.ident}", None)
+        else:
+            self._cache[f"article_client_{self.ident}"] = value
 
     def _get_client(self, client_name: str, headers: dict = None, verify: bool = True) -> httpx.Client:
         """
