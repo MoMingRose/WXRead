@@ -19,6 +19,16 @@
 ql repo https://github.com/MoMingRose/WXRead.git "read" "" "*" "" "py|txt|yaml"
 ```
 
+### python3依赖
+```text
+httpx
+colorama
+pyyaml
+ujson
+```
+
+
+
 ### 配置环境
 
 个人觉得这对这个项目来说 如果配置env 则会比较杂乱，不容易修改
