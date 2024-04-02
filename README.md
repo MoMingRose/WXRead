@@ -22,6 +22,7 @@ ql repo https://github.com/MoMingRose/WXRead.git "read" "" "*" "" "py|txt|yaml"
 ### python3依赖
 ```text
 httpx
+pydantic
 colorama
 pyyaml
 ujson
