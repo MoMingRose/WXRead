@@ -13,13 +13,26 @@
 >
 > 开发环境Python版本: `3.10`
 
+> [!WARNING]
+> 请现在当前使用的青龙面板中安装`pydantic`依赖（Python3的）\
+> 如果安装失败，那么此项目将不适合你 \
+> 或者将青龙转成`debian`版本
+
 ### 青龙拉库命令-v1
 
 ```shell
-ql repo https://github.com/MoMingRose/WXRead.git "read" "" "*" "" "py|txt|yaml"
+ql repo https://github.com/MoMingRose/WXRead.git "read" "" "*" "" "py|yaml"
 ```
 
+如果不行尝试下方的看看 `2.16.2`版本可以拉取成功
+
+```shell
+ql repo https://github.com/MoMingRose/WXRead.git "read" "" ".*" "master" "py|yaml"
+```
+
+
 ### python3依赖
+
 ```text
 httpx
 pydantic
@@ -27,8 +40,6 @@ colorama
 pyyaml
 ujson
 ```
-
-
 
 ### 配置环境
 
@@ -39,7 +50,6 @@ ujson
 在项目下的`config`文件夹中，里面有具体的注释
 
 🥤阅读于 2024.04.02 测试无误
-
 
 如果这个项目让你感到心情愉悦，可以支持一下，点个Start
 

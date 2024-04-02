@@ -14,7 +14,8 @@ import time
 from httpx import URL
 
 from config import load_klyd_config
-from exception.common import PauseReadingWaitNext, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange
+from exception.common import PauseReadingWaitNext, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange, \
+    FailedPushTooManyTimes
 from exception.klyd import FailedPassDetect, \
     RegExpError, WithdrawFailed
 from schema.klyd import KLYDConfig, RspRecommend, RspReadUrl, RspDoRead, ArticleInfo, RspWithdrawal, RspWithdrawalUser
@@ -130,6 +131,10 @@ class KLYDV2(WxReadTaskBase):
             # 尝试进行提现操作
             self.__request_withdraw()
             self.is_need_withdraw = False
+        except FailedPushTooManyTimes as e:
+            self.logger.war(e)
+            self.is_need_withdraw = False
+            sys.exit(0)
         except (FailedPassDetect, WithdrawFailed) as e:
             self.logger.war(e)
             self.is_need_withdraw = False
@@ -305,6 +310,8 @@ class KLYDV2(WxReadTaskBase):
             if is_need_push or self.ARTICLE_LINK_VALID_COMPILE.match(res_model.url) is None:
                 self.logger.war(f"🟡🔺 阅读文章链接不是期待值，走推送通道!")
                 is_pushed = self.wx_pusher_link(res_model.url)
+                if not is_pushed:
+                    raise FailedPushTooManyTimes()
                 is_need_push = False
                 is_sleep = True
             else:

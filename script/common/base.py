@@ -55,9 +55,9 @@ class WxReadTaskBase(ABC):
         # 构建基本请求头
         self.base_headers = self.build_base_headers()
         # 构建主线程客户端
-        self.main_client = httpx.Client(headers=self.base_headers, timeout=30)
+        self.main_client = httpx.Client(headers=self.base_headers, timeout=5)
         # # 构建基本客户端
-        # self.base_client = httpx.Client(headers=self.base_headers, timeout=30)
+        # self.base_client = httpx.Client(headers=self.base_headers, timeout=5)
 
         self.thread2name = {
             "is_log_response": self.is_log_response,
@@ -148,10 +148,10 @@ class WxReadTaskBase(ABC):
             self.is_need_withdraw = False
             self.logger.exception(e)
             sys.exit(0)
-        finally:
-            self.base_client = None
-            self.read_client = None
-            self.article_client = None
+        # finally:
+        #     self.base_client = None
+        #     self.read_client = None
+        #     self.article_client = None
 
     def start_queue(self):
         while not self.wait_queue.empty():
@@ -236,6 +236,7 @@ class WxReadTaskBase(ABC):
     def _request(self, method: str, url: str | URL, prefix: str, *args, client: httpx.Client = None,
                  update_headers: dict = None,
                  ret_types: str | list = None,
+                 retry_count: int = 3,
                  **kwargs) -> any:
         """
         发起请求
@@ -260,7 +261,7 @@ class WxReadTaskBase(ABC):
         try:
             self.lock.acquire()
             if client is None:
-                client = httpx.Client(headers=self.build_base_headers(self.account_config), timeout=30)
+                client = httpx.Client(headers=self.build_base_headers(self.account_config), timeout=5)
                 flag = True
             else:
                 client = client
@@ -301,6 +302,13 @@ class WxReadTaskBase(ABC):
             if len(ret_data) == 1:
                 return ret_data[0]
             return ret_data
+        except httpx.ReadTimeout as e:
+            self.logger.error(f"请求超时, 剩余重试次数：{retry_count}")
+            if retry_count > 0:
+                return self._request(method, url, prefix, *args, client=client, update_headers=update_headers,
+                                     ret_types=ret_types, retry_count=retry_count - 1, **kwargs)
+            else:
+                raise StopReadingNotExit("超时重试次数过多!")
         except JSONDecodeError as e:
             if not ignore_json_error:
                 self.logger.exception(f"请求失败 JSONDecodeError：{e}")
@@ -379,7 +387,7 @@ class WxReadTaskBase(ABC):
         if client is None:
             if headers is None:
                 headers = self.build_base_headers(self.account_config)
-            client = httpx.Client(headers=headers, timeout=30, verify=verify)
+            client = httpx.Client(headers=headers, timeout=5, verify=verify)
             self._cache[client_name] = client
         return client
 
