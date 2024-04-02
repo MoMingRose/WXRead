@@ -280,6 +280,8 @@ class KLYDV2(WxReadTaskBase):
                     raise FailedPassDetect("🟢⭕️ 此账号今天已达到阅读限制，请明天再来!")
                 elif res_model.is_pass_failed:
                     raise FailedPassDetect("🔴⭕️ 此账号今日已被标记，请明天再试!")
+                else:
+                    self.logger.war(f"🟡 出现未记录结果（可截图给作者添加），请注意：{res_model.success_msg}")
                 is_need_push = True
             elif ret_count == 4:
                 # 表示正处于检测中
