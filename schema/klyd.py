@@ -34,7 +34,7 @@ class KLYDAccount(CommonPartConfig, CommonKLYDConfig):
 
 class BaseKLYDGlobalConfig(CommonGlobalConfig, CommonKLYDConfig):
     """可乐阅读配置（全局配置）"""
-    biz_data: list
+    biz_data: list | None = Field(None, description="检测文章的biz")
 
 
 KLYDConfig: Type[BaseModel] = create_model(

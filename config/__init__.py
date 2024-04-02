@@ -31,7 +31,15 @@ def load_klyd_config() -> KLYDConfig:
     加载猫猫看看阅读的配置
     :return:
     """
-    return __load_config("可乐阅读", "klyd", KLYDConfig)
+    data: KLYDConfig = __load_config("可乐阅读", "klyd", KLYDConfig)
+    if data.biz_data is None:
+        data.biz_data = ["MzkwNTY1MzYxOQ=="]
+        # 给yaml中没有配置biz_data的自动添加
+        with open(os.path.join(root_dir, "klyd.yaml"), "a", encoding="utf-8") as fp:
+            fp.write("\nbiz_data:\n")
+            for i in data.biz_data:
+                fp.write(f"  - \"{i}\"\n")
+    return data
 
 
 def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwargs) -> any:
