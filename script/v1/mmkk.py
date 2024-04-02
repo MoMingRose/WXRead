@@ -5,6 +5,7 @@
 【创建时间】2024-03-28
 【功能描述】
 """
+import json
 import logging
 import random
 import re
@@ -17,8 +18,8 @@ from pydantic import ValidationError
 
 from config import load_mmkk_config
 from exception.mmkk import ReadValid, FailedFetchUK, FailedFetchArticleJSUrl, FailedFetchArticleJSVersion, \
-    ArticleJSUpdated, CodeChanged, FailedFetchReadUrl, StopRun, PauseReading, ReachedLimit
-from schema.mmkk import WorkInfo, User, WTMPDomain, MKWenZhang, AddGolds, MMKKConfig, MMKKAccount
+    ArticleJSUpdated, CodeChanged, FailedFetchReadUrl, StopRun, PauseReading, ReachedLimit, StopRunWithShowMsg
+from schema.mmkk import WorkInfoRsp, UserRsp, WTMPDomainRsp, MKWenZhangRsp, AddGoldsRsp, MMKKConfig, MMKKAccount
 from utils import *
 from utils.push_utils import WxPusher
 
@@ -53,6 +54,8 @@ class MMKK:
     CURRENT_SCRIPT_VERSION = "0.1"
     # 当前脚本作者
     CURRENT_SCRIPT_AUTHOR = "MoMingLog"
+    # 脚本更新时间
+    CURRENT_SCRIPT_UPDATED = "2024-03-30"
 
     # 当前脚本适配的版本号
     CURRENT_ARTICLE_JS_VERSION = "10.0"
@@ -79,7 +82,7 @@ class MMKK:
     ARTICLE_JS_V_COMPILE = re.compile(r"v=(\d+\.\d+)&uk", re.S)
     # 检测有效阅读链接
     ARTICLE_LINK_VALID_COMPILE = re.compile(
-        r"^https://mp.weixin.qq.com/s\?__biz=.*?&mid=.*?&idx=\d*&sn=.*?&scene=\d*#wechat_redirect$")
+        r"^https?://mp.weixin.qq.com/s\?__biz=[^&]*&mid=[^&]*&idx=\d*&(?!.*?chksm).*?&scene=\d*#wechat_redirect$")
     # 提取阅读文章链接的__biz值
     ARTICLE_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&")
 
@@ -94,11 +97,6 @@ class MMKK:
         logger.info(f"【脚本信息】\n> 作者：{self.CURRENT_SCRIPT_AUTHOR}\n> 版本号：{self.CURRENT_SCRIPT_VERSION}\n")
         logger.info(
             f"【任务配置信息】\n> 账号数量：{len(self.accounts)}\n> 账号队列: {[name for name in self.accounts.keys()]}\n> 配置来源: {config_data.source}\n")
-
-        logger.info("睡眠1.5秒，任务即将开始...")
-        time.sleep(1.5)
-        # 入口链接
-        self.entry_url = None
         # # 基本链接（schema://netloc）不包含路径
         # self.base_url = None
         # 构建基本请求头
@@ -114,21 +112,21 @@ class MMKK:
         # 目前默认为1，不知道作用，生效时间10分钟，与后续的cookie绑定在一起
         self.ejectCode = "1"
         # 遍历所有用户数据
-        for name, account in self.accounts.items():
+        for name, account_config in self.accounts.items():
             logger.set_tag(name)
-            print(f"【{name}】任务开始".center(50, "-"))
             self.uk = None
             self.name = name
-            # 获取用户数据
-            self.current_user: MMKKAccount = account
+            # 获取用户配置
+            self.account_config: MMKKAccount = account_config
             # 解析并设置用户cookie
-            self.base_client.cookies = self.__parse_cookie(self.current_user.cookie)
+            self.base_client.cookies = self.__parse_cookie(self.account_config.cookie)
             logger.info(
                 f"【账号配置信息】\n> 账号名称: {name}\n> 提现方式: {self.withdraw_way}\n> 推送uid: {self.wx_pusher_uid}")
+            logger.info("请检查配置是否正确，任务即将3秒后开始...")
+            time.sleep(3)
             # # 初始化链接
             # self.__init_userinfo()
             self.run()
-            print(f"【{name}】任务结束".center(50, "-"))
 
         self.empty_client.close()
         self.base_client.close()
@@ -136,29 +134,46 @@ class MMKK:
         self.withdraw_client.close()
 
     def run(self):
+        print(f"【{self.name}】任务开始".center(50, "-"))
+        is_withdraw = False
+        is_exit = False
         try:
             self.__init_data()
             self.__start_read()
+            is_withdraw = True
         except (PauseReading, ReachedLimit) as e:
             logger.war(f"🔘 {e}")
-        except StopRun as e:
+            is_withdraw = True
+        except (StopRun, StopRunWithShowMsg) as e:
+            is_withdraw = False
+            is_exit = True
             logger.error(e)
-            sys.exit(0)
+        except KeyboardInterrupt:
+            is_withdraw = False
+            logger.error("用户中断任务")
+            is_exit = True
         except Exception as e:
             logger.exception(e)
         finally:
             try:
-                self.__request_withdraw()
+                if is_withdraw:
+                    self.__request_withdraw()
             except Exception as e:
                 logger.exception(e)
+        print(f"【{self.name}】任务结束".center(50, "-"))
+        if is_exit:
+            sys.exit(0)
 
     @property
     def app_token(self):
-        return self.mmkk_config_data.appToken
+        ret = self.account_config.appToken
+        if ret is None:
+            ret = self.mmkk_config_data.appToken
+        return ret
 
     @property
     def origin_cookie(self) -> str:
-        return self.current_user.cookie
+        return self.account_config.cookie
 
     @property
     def cookie(self) -> str:
@@ -166,23 +181,23 @@ class MMKK:
 
     @property
     def wx_pusher_uid(self):
-        return self.current_user.uid
+        return self.account_config.uid
 
     @property
     def read_delay(self):
-        delay = self.current_user.delay
+        delay = self.account_config.delay
         ret = delay.read_delay if delay is not None else self.mmkk_config_data.delay.read_delay
         return ret
 
     @property
     def push_delay(self):
-        delay = self.current_user.delay
+        delay = self.account_config.delay
         ret = delay.push_delay if delay is not None else self.mmkk_config_data.delay.push_delay
         return ret
 
     @property
     def withdraw(self):
-        ret = self.current_user.withdraw
+        ret = self.account_config.withdraw
         if ret == 0:
             ret = self.mmkk_config_data.withdraw
         return ret
@@ -195,24 +210,36 @@ class MMKK:
 
     @property
     def aliAccount(self):
-        ret = self.current_user.aliAccount
-        if not ret:
+        ret = self.account_config.aliAccount
+        if not ret or ret is None:
             ret = self.mmkk_config_data.aliAccount
 
-        return ret
+        return ret if ret else ""
 
     @property
     def aliName(self):
-        ret = self.current_user.aliName
-        if not ret:
+        ret = self.account_config.aliName
+        if not ret or ret is None:
             ret = self.mmkk_config_data.aliName
-        return ret
+        return ret if ret else ""
+
+    @property
+    def ua(self):
+        try:
+            ret = self.account_config.ua
+            if ret is None:
+                ret = self.mmkk_config_data.ua
+        except AttributeError:
+            ret = self.mmkk_config_data.ua
+
+        return ret if ret else "Mozilla/5.0 (Linux; Android 14; M2012K11AC Build/UKQ1.230804.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 XWEB/1160083 MMWEBSDK/20231202 MMWEBID/4194 MicroMessenger/8.0.47.2560(0x28002F50) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64"
 
     def __init_data(self):
         entry_url = EntryUrl.get_mmkk_entry_url()
-        self.entry_url = entry_url
         logger.info(f"入口链接：{entry_url}")
         home_url = self.__request_entry(entry_url)
+        if not home_url:
+            raise StopRun("获取入口链接失败")
         url_schema = urlparse(home_url)
         base_url = f"{url_schema.scheme}://{url_schema.netloc}"
         self.base_client.base_url = base_url
@@ -279,7 +306,7 @@ class MMKK:
                 logger.error(f"获取阅读文章失败!")
                 return
 
-            if isinstance(article_res_model, MKWenZhang):
+            if isinstance(article_res_model, MKWenZhangRsp):
                 article_url = article_res_model.data.link
 
             is_pass_push = False
@@ -313,7 +340,7 @@ class MMKK:
             # 开始尝试获取奖励和奖励信息
             self.__request_add_gold(params)
 
-    def __request_add_gold(self, params: dict, is_pushed: bool = False) -> AddGolds | bool:
+    def __request_add_gold(self, params: dict, is_pushed: bool = False) -> AddGoldsRsp | bool:
         """
         增加金币
 
@@ -334,7 +361,10 @@ class MMKK:
         res_json = None
         try:
             res_json = response.json()
-            addGoldsModel = AddGolds.model_validate(res_json)
+            if res_json.get("errcode") == 405:
+                logger.error(res_json.get("msg"))
+                return False
+            addGoldsModel = AddGoldsRsp.model_validate(res_json)
             logger.info(addGoldsModel)
             return addGoldsModel
         except ValidationError as e:
@@ -376,12 +406,8 @@ class MMKK:
         构建基本请求头
         :return:
         """
-        ua = self.accounts.get("ua")
-        if ua is None:
-            ua = self.accounts.get("User-Agent")
-
         return {
-            "User-Agent": ua if ua else "Mozilla/5.0 (Linux; Android 14; M2012K11AC Build/UKQ1.230804.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 XWEB/1160083 MMWEBSDK/20231202 MMWEBID/4194 MicroMessenger/8.0.47.2560(0x28002F50) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64",
+            "User-Agent": self.ua,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/wxpic,image/tpg,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "X-Requested-With": "com.tencent.mm",
         }
@@ -485,12 +511,14 @@ class MMKK:
                 elif "上限" in msg:
                     raise ReachedLimit(msg)
                 raise ReadValid(msg)
-            article_res_model = MKWenZhang.model_validate(response.json())
+            article_res_model = MKWenZhangRsp.model_validate(res_json)
             logger.info(f"获取阅读文章链接成功：{article_res_model.data.link}")
             # self.wx_pusher_link(article_res_model.data.link)
             return article_res_model
         except (ReachedLimit, PauseReading, ReadValid) as e:
             raise e
+        except json.JSONDecodeError as e:
+            logger.error(f"提取阅读文章链接失败，请截图下方报错原因并提交给作者，以供改进: {e}")
         except ValidationError as e:
             logger.error(f"发生类型验证错误，请截图下方报错原因并提交给作者，以供改进: {e}")
             if res_json is not None:
@@ -511,7 +539,7 @@ class MMKK:
         }
 
     # 获取“正在加载”页面源代码
-    def __request_load_page(self, wtmpDomain: WTMPDomain) -> str:
+    def __request_load_page(self, wtmpDomain: WTMPDomainRsp) -> str:
         """
         获取“正在加载”页面（前往文章的中转页面）
         :param wtmpDomain: 文章阅读二维码链接
@@ -523,7 +551,7 @@ class MMKK:
         return html
 
     # 获取文章阅读二维码相关信息
-    def __request_WTMPDomain(self) -> WTMPDomain:
+    def __request_WTMPDomain(self) -> WTMPDomainRsp:
         """
         获取文章阅读二维码链接
         :return:
@@ -533,14 +561,14 @@ class MMKK:
         logger.response("获取文章阅读二维码链接，base_client", response)
         try:
             res_json = response.json()
-            wtmpDomain = WTMPDomain.model_validate(res_json)
+            wtmpDomain = WTMPDomainRsp.model_validate(res_json)
             logger.info(f"获取文章阅读二维码信息成功")
             return wtmpDomain
         except Exception as e:
             logger.exception(f"账号[{self.name}]获取文章阅读二维码信息失败, {e}")
 
     # 请求今日阅读相关信息
-    def __request_workInfo(self) -> WorkInfo:
+    def __request_workInfo(self) -> WorkInfoRsp:
         """
         获取文章阅读篇数和金币
         :return:
@@ -553,13 +581,13 @@ class MMKK:
         logger.response("获取文章阅读篇数和金币，base_client", response)
         try:
             res_json = response.json()
-            workInfo = WorkInfo.model_validate(res_json)
+            workInfo = WorkInfoRsp.model_validate(res_json)
             return workInfo
         except Exception as e:
             logger.exception(f"账号[{self.name}]获取文章阅读篇数和金币失败, {e}")
 
     # 请求用户信息
-    def __request_user(self) -> User:
+    def __request_user(self) -> UserRsp:
         """
         获取用户信息
         :return:
@@ -573,7 +601,7 @@ class MMKK:
 
         try:
             res_json = response.json()
-            user = User.model_validate(res_json)
+            user = UserRsp.model_validate(res_json)
             logger.info(f"获取用户信息成功")
             return user
         except Exception as e:
@@ -615,32 +643,48 @@ class MMKK:
             raise Exception(f"请求入口链接失败")
 
         redirect_url = response.headers.get("Location")
-
-        logger.debug(f"请求入口链接成功, {redirect_url}")
-
         redirect_url_schema = urlparse(redirect_url)
         self.base_client.headers.update({
             "Host": redirect_url_schema.netloc
         })
+        if "showmsg" in redirect_url:
+            logger.info(f"检测到公告信息, 正在提取...")
+            response = self.base_client.get(redirect_url)
+            logger.response("获取公告信息，base_client", response)
+            raise StopRunWithShowMsg(self.__parse_show_msg(response.text))
+        else:
+            logger.debug(f"请求入口链接成功, {redirect_url}")
+            response = self.base_client.get(redirect_url)
+            logger.response("请求入口链接，base_client", response)
+            # 再次获取链接
+            home_url = response.headers.get("Location", "")
 
-        response = self.base_client.get(redirect_url)
-        logger.response("请求入口链接，base_client", response)
+            if "open.weixin.qq.com/connect/oauth2" in home_url:
+                raise Exception(f"{self.name} cookie已失效，请重新获取cookie")
+            logger.debug(f"账号[{self.name}]请求重定向链接成功, {home_url}")
 
-        # 再次获取链接
-        home_url = response.headers.get("Location")
+            return home_url
 
-        if "open.weixin.qq.com/connect/oauth2" in home_url:
-            raise Exception(f"{self.name} cookie已失效，请重新获取cookie")
-        logger.debug(f"账号[{self.name}]请求重定向链接成功, {home_url}")
-
-        return home_url
+    def __parse_show_msg(self, show_msg_html: str):
+        """
+        解析公告信息
+        :param show_msg_html:
+        :return:
+        """
+        body_html = re.search(r"<body(.*?)</body>", show_msg_html, re.S).group(1)
+        if r := re.search(r"container.*?p.*?>(.*?)</p\s*>", body_html, re.S):
+            return re.sub(r"<br/?\s*>", "\n", r.group(1))
+        # 如果上方的正则失效，则手动进行检查
+        if "系统维护中" in body_html:
+            return "系统维护中, 请耐心等待官方恢复!"
+        return "检测到公告信息, 请自行前往查看, 脚本已自动停止运行!"
 
     def __request_withdraw(self):
         """
         发起提现请求
         :return:
         """
-        workInfo: WorkInfo = self.__request_workInfo()
+        workInfo: WorkInfoRsp = self.__request_workInfo()
         gold = int(int(workInfo.data.remain_gold) / 1000) * 1000
         money = workInfo.data.remain
         logger.info(f"【账户余额统计】\n> 待提现金额：{money}元\n> 待兑换金币: {gold}金币")

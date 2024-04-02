@@ -1,9 +1,10 @@
 # 【必填】 WxPusher推送通知的appToken（可单独配置）
 # 功能描述：当出现检测文章链接时，自动推送到对应账号
-# Tips 1: WxPusher官网地址 https://wxpusher.zjiecode.com/docs/#/
-# Tips 2: 可以在云桌面搭建微信机器人，用来自动监听此消息，从而完成自动过检测功能
-# Tips 3: 可在common.yaml为所有任务配置统一的appToken，此时这里的appToken可以省略
-appToken: ""
+# Tips: 可以在云桌面搭建微信机器人，用来自动监听此消息，从而完成自动过检测功能
+# Tips: 可在common.yaml为所有任务配置统一的appToken，此时这里的appToken可以省略
+# Tips: 由于默认【配置策略】为【任务优先】，也就是此文件配置优先
+# 故，如果这里是空字符串，则会覆盖common.yaml中的【配置策略】
+#appToken: ""
 
 # 【选填】 全局延迟配置（可单独配置，直接在对应的账号中添加相同的格式即可）
 # 功能描述：完成阅读，获取阅读文章前的睡眠时间
@@ -24,11 +25,14 @@ appToken: ""
 # 功能描述：设置线程池的最大线程数，每个线程可以单独跑一个账号
 #max_thread_count: 1
 
-# 【选填】 全局的支付宝提现账号（可单独配置），默认为空，则表示微信提现
+# 【选填】提现方式：wx or ali
+# 功能描述：wx表示微信提现，ali表示支付宝提现
+#withdraw_type: wx
+# 【选填】 全局的支付宝提现账号（可单独配置），默认为 None
+# 功能描述：先在上方选择 ali，再在此处填写对应的支付宝账号
+# Tips: 如果这里不填写，则会使用默认已经绑定的支付宝（如果账号已经绑定过，这里就算填写其他的，也会使用账号绑定的支付宝账号进行提现）
 #aliName: ""
 #aliAccount: ""
-# 【选填】全局提现金额（单位：元）（可单独配置）
-#withdraw: 0.9
 
 # 【必填】
 account_data:
@@ -36,6 +40,8 @@ account_data:
   账号1:
     # 【必填】
     # 抓包简述：开启抓包后，进入主页面，再回到抓包软件，筛选出链接中包含 get_read_url 或者 tuijian，复制其中的cookie值即可
+    # 貌似通过 PC微信 抓取的Cookie会出现过期现象，推荐抓取微信APP的Cookie
+    # 无 root 的可以使用虚拟机，然后在虚拟机中登录微信APP，只需要抓取虚拟机的数据包即可
     cookie: "klyd_1"
     # 【必填】WxPusher中的用户UID，检测文章通知会单独发给这个微信用户
     uid: "1"
@@ -48,20 +54,3 @@ account_data:
 #  账号3:
 #    cookie: "klyd_3"
 #    uid: "3"
-# 用于漏网之鱼检测（数据来源：幻生大佬）
-biz_data:
-  - "MzkxNTE3MzQ4MQ=="
-  - "Mzg5MjM0MDEwNw=="
-  - "MzUzODY4NzE2OQ=="
-  - "MzkyMjE3MzYxMg=="
-  - "MzkxNjMwNDIzOA=="
-  - "Mzg3NzUxMjc5Mg=="
-  - "Mzg4NTcwODE1NA=="
-  - "Mzk0ODIxODE4OQ=="
-  - "Mzg2NjUyMjI1NA=="
-  - "MzIzMDczODg4Mw=="
-  - "Mzg5ODUyMzYzMQ=="
-  - "MzU0NzI5Mjc4OQ=="
-  - "Mzg5MDgxODAzMg=="
-  - "MzIzMDczODg4Mw=="
-  - "MzkxNDU1NDEzNw=="

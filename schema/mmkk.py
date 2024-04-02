@@ -9,43 +9,26 @@ from typing import Dict, Type
 
 from pydantic import BaseModel, Field, create_model
 
+from schema.common import CommonGlobalConfig, CommonDelayConfig, CommonPartConfig
+
 __all__ = [
-    "WorkInfo",
-    "User",
-    "WTMPDomain",
-    "MKWenZhang",
-    "AddGolds",
     "MMKKConfig",
+    "WorkInfoRsp",
+    "UserRsp",
+    "WTMPDomainRsp",
+    "MKWenZhangRsp",
+    "AddGoldsRsp",
 ]
 
 
-class DelayConfig(BaseModel):
-    read_delay: list
-    push_delay: list
-
-
-class CommonConfig(BaseModel):
-    """全局配置和局部配置的共同部分"""
-    withdraw: float = Field(0, description="提现金额（单位: 元），表示只有大于等于这个数才可以提现")
-    aliAccount: str = Field("", description="支付宝账号，默认为空")
-    aliName: str = Field("", description="支付宝账号姓名，默认为空")
-    delay: DelayConfig | None = Field(None, description="阅读延迟时间（单位: 秒）")
-    ua: str | None = Field(None, description="用户浏览器标识")
-
-
-class MMKKAccount(CommonConfig):
+class MMKKAccount(CommonPartConfig):
     """账号配置（局部配置）"""
     cookie: str
-    uid: str
 
 
-class BaseMMKKConfig(CommonConfig):
+class BaseMMKKGlobalConfig(CommonGlobalConfig):
     """猫猫看看阅读配置（全局配置）"""
     biz_data: list
-    delay: DelayConfig
-    appToken: str = Field(..., description="WxPusher推送通知的appToken")
-    debug: bool = Field(False, description="是否开启调试模式")
-    # source: str = Field("mmkk.yaml", description="配置来源")
 
 
 # 通过 create_model() 方法创建动态键模型
@@ -53,11 +36,11 @@ MMKKConfig: Type[BaseModel] = create_model(
     'MMKKConfig',
     account_data=(Dict[str | int, MMKKAccount], {}),
     source=(str, "mmkk.yaml"),
-    __base__=BaseMMKKConfig
+    __base__=BaseMMKKGlobalConfig
 )
 
 
-class Common(BaseModel):
+class CommonRsp(BaseModel):
     errcode: int
     msg: str
 
@@ -69,7 +52,7 @@ class WorkInfoData(BaseModel):
     remain: float = Field(..., description="当前现金余额(元)")
 
 
-class WorkInfo(Common):
+class WorkInfoRsp(CommonRsp):
     data: WorkInfoData
 
     def __str__(self):
@@ -88,7 +71,7 @@ class UserData(BaseModel):
     note: str = Field(..., description="备注")
 
 
-class User(Common):
+class UserRsp(CommonRsp):
     data: UserData
 
     def __str__(self):
@@ -102,7 +85,7 @@ class WTMPDomainData(BaseModel):
     domain: str = Field(..., description="域名链接（返回的是完整的链接）")
 
 
-class WTMPDomain(Common):
+class WTMPDomainRsp(CommonRsp):
     data: WTMPDomainData
 
     def __str__(self):
@@ -118,7 +101,7 @@ class MKWenZhangData(BaseModel):
     type2: str = Field("", description="类型: 目前已知的有read，有的响应体中没有这个参数，故设置默认值为空字符串")
 
 
-class MKWenZhang(Common):
+class MKWenZhangRsp(CommonRsp):
     data: MKWenZhangData
 
     def __str__(self):
@@ -136,7 +119,7 @@ class AddGoldsData(BaseModel):
     remain_read: int = Field(..., description="今日剩余阅读文章数")
 
 
-class AddGolds(Common):
+class AddGoldsRsp(CommonRsp):
     data: AddGoldsData
 
     def __str__(self):
