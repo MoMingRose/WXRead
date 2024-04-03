@@ -10,6 +10,7 @@ import re
 from config import load_mmkk_config
 from schema.mmkk import MMKKConfig
 from script.common.base import WxReadTaskBase
+from utils import EntryUrl
 
 
 class APIS:
@@ -74,11 +75,15 @@ class MMKKV2(WxReadTaskBase):
     def __init__(self, config_data: MMKKConfig = load_mmkk_config()):
         super().__init__(config_data, logger_name="😸阅读")
 
+    def get_entry_url(self):
+        return EntryUrl.get_mmkk_entry_url()
+
     def init_fields(self):
         pass
 
     def run(self, name):
         pass
 
-    def get_entry_url(self):
-        pass
+
+if __name__ == '__main__':
+    MMKKV2()

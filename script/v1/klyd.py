@@ -624,7 +624,7 @@ class KLYD:
         :return:
         """
         try:
-            return model.model_validate(data)
+            return model.parse_obj(data)
         except ValidationError as e:
             logger.error(f"数据校验失败, 原因: {e}\n> 请通知作者更新 原始响应数据：{data}")
             return data

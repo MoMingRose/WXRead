@@ -55,7 +55,7 @@ class MMKK:
     # 当前脚本作者
     CURRENT_SCRIPT_AUTHOR = "MoMingLog"
     # 脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-03-30"
+    CURRENT_SCRIPT_UPDATED = "2024-04.03"
 
     # 当前脚本适配的版本号
     CURRENT_ARTICLE_JS_VERSION = "11.0"
@@ -364,7 +364,7 @@ class MMKK:
             if res_json.get("errcode") == 405:
                 logger.error(res_json.get("msg"))
                 return False
-            addGoldsModel = AddGoldsRsp.model_validate(res_json)
+            addGoldsModel = AddGoldsRsp.parse_obj(res_json)
             logger.info(addGoldsModel)
             return addGoldsModel
         except ValidationError as e:
@@ -511,7 +511,7 @@ class MMKK:
                 elif "上限" in msg:
                     raise ReachedLimit(msg)
                 raise ReadValid(msg)
-            article_res_model = MKWenZhangRsp.model_validate(res_json)
+            article_res_model = MKWenZhangRsp.parse_obj(res_json)
             logger.info(f"获取阅读文章链接成功：{article_res_model.data.link}")
             # self.wx_pusher_link(article_res_model.data.link)
             return article_res_model
@@ -561,7 +561,7 @@ class MMKK:
         logger.response("获取文章阅读二维码链接，base_client", response)
         try:
             res_json = response.json()
-            wtmpDomain = WTMPDomainRsp.model_validate(res_json)
+            wtmpDomain = WTMPDomainRsp.parse_obj(res_json)
             logger.info(f"获取文章阅读二维码信息成功")
             return wtmpDomain
         except Exception as e:
@@ -581,7 +581,7 @@ class MMKK:
         logger.response("获取文章阅读篇数和金币，base_client", response)
         try:
             res_json = response.json()
-            workInfo = WorkInfoRsp.model_validate(res_json)
+            workInfo = WorkInfoRsp.parse_obj(res_json)
             return workInfo
         except Exception as e:
             logger.exception(f"账号[{self.name}]获取文章阅读篇数和金币失败, {e}")
@@ -601,7 +601,7 @@ class MMKK:
 
         try:
             res_json = response.json()
-            user = UserRsp.model_validate(res_json)
+            user = UserRsp.parse_obj(res_json)
             logger.info(f"获取用户信息成功")
             return user
         except Exception as e:

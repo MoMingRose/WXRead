@@ -9,7 +9,7 @@ import re
 from typing import Type, Dict
 
 from httpx import URL
-from pydantic import BaseModel, create_model, Field, field_validator, HttpUrl
+from pydantic import BaseModel, create_model, Field,  HttpUrl, validator
 
 from schema.common import CommonGlobalConfig, CommonPartConfig
 
@@ -134,7 +134,7 @@ class RspReadUrl(BaseModel):
     """获取阅读链接 响应"""
     link: str | HttpUrl = Field(..., alias="jump", description="阅读链接")
 
-    @field_validator("link")
+    @validator("link")
     def check_link(cls, v) -> URL:
         if not isinstance(v, URL):
             v = URL(v)
