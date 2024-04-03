@@ -36,7 +36,7 @@ class APIS:
 
 
 class KLYDV2(WxReadTaskBase):
-    CURRENT_SCRIPT_VERSION = "2.0.0"
+    CURRENT_SCRIPT_VERSION = "2.0.1"
     CURRENT_TASK_NAME = "可乐阅读"
 
     # 当前脚本创建时间
@@ -276,6 +276,12 @@ class KLYDV2(WxReadTaskBase):
                     raise FailedPassDetect("🔴 貌似检测失败了，具体请查看上方报错原因")
             article_url = res_model.url
 
+            if article_url == "close":
+                if "本轮阅读已完成" == res_model.success_msg:
+                    self.logger.info(f"🟢✔️ {res_model.success_msg}")
+                    return
+                raise FailedPassDetect(f"🟢⭕️ {res_model.success_msg}")
+
             if ret_count == 1 and article_url is None:
                 if retry_count == 0:
                     raise NoSuchArticle(
@@ -293,25 +299,14 @@ class KLYDV2(WxReadTaskBase):
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
 
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
-            if article_url != "close" and (
-                    "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url)):
+            if "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
                 self.logger.info(f"🟡 出现包含检测特征的文章链接，走推送通道")
                 is_need_push = True
-            elif article_url != "close" and biz_match and biz_match.group(1) in self.detected_biz_data:
+            elif biz_match and biz_match.group(1) in self.detected_biz_data:
                 self.logger.info(f"🟡 出现已被标记的biz文章，走推送通道")
                 is_need_push = True
             # 判断此次请求后返回的键值对数量是多少
             elif ret_count == 2:
-                # 如果是两个，可能有以下几种情况：
-                if "本轮阅读已完成" == res_model.success_msg:
-                    self.logger.info(f"🟢✔️ {res_model.success_msg}")
-                    return
-                elif res_model.msg is not None and "今天已达到阅读限制" in res_model.msg:
-                    raise FailedPassDetect("🟢⭕️ 此账号今天已达到阅读限制，请明天再来!")
-                elif res_model.is_pass_failed:
-                    raise FailedPassDetect("🔴⭕️ 此账号今日已被标记，请明天再试!")
-                else:
-                    self.logger.war(f"🟡 出现未记录结果（可截图给作者添加），请注意：{res_model.success_msg}")
                 is_need_push = True
             elif ret_count == 4:
                 # 表示正处于检测中
