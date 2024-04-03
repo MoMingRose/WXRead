@@ -7,7 +7,7 @@
 """
 
 
-class PauseReadingWaitNext(Exception):
+class PauseReadingTurnNext(Exception):
     def __init__(self, msg: str):
         super().__init__(f"暂停阅读, {msg}")
 

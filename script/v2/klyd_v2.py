@@ -14,7 +14,7 @@ import time
 from httpx import URL
 
 from config import load_klyd_config
-from exception.common import PauseReadingWaitNext, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange, \
+from exception.common import PauseReadingTurnNext, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange, \
     FailedPushTooManyTimes, NoSuchArticle
 from exception.klyd import FailedPassDetect, \
     RegExpError, WithdrawFailed
@@ -496,7 +496,7 @@ class KLYDV2(WxReadTaskBase):
             self.logger.info(infoView)
             if msg := infoView.msg:
                 if "下一批" in msg:
-                    raise PauseReadingWaitNext(msg)
+                    raise PauseReadingTurnNext(msg)
                 elif "阅读限制" in msg or "任务上限" in msg:
                     raise StopReadingNotExit(msg)
 

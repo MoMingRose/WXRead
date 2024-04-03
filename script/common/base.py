@@ -21,7 +21,7 @@ import httpx
 from httpx import URL
 from pydantic import BaseModel, ValidationError
 
-from exception.common import PauseReadingWaitNext, Exit, StopReadingNotExit, ExitWithCodeChange, CookieExpired, \
+from exception.common import PauseReadingTurnNext, Exit, StopReadingNotExit, ExitWithCodeChange, CookieExpired, \
     RspAPIChanged
 from schema.klyd import KLYDAccount, KLYDConfig
 from utils.logger_utils import ThreadLogger, NestedLogColors
@@ -131,7 +131,7 @@ class WxReadTaskBase(ABC):
         except CookieExpired as e:
             self.logger.war(e)
             return
-        except PauseReadingWaitNext as e:
+        except PauseReadingTurnNext as e:
             self.lock.acquire()
             self.logger.info(f"🟢🔶 {e}")
             if self.is_wait_next_read:
