@@ -26,9 +26,4 @@ new Env("猫猫看看");
 from script.v1.mmkk import MMKK
 
 if __name__ == '__main__':
-    # TODO: 记得修改这里的固定版本号
-    # 上面的TODO 主要用于提醒我上传的时候更改版本号
-    if MMKK.CURRENT_SCRIPT_VERSION != "0.1":
-        print(f"当前最新猫猫版本为{MMKK.CURRENT_SCRIPT_VERSION}, 请重新拉库以更新!")
-    else:
-        MMKK()
+    MMKK()
