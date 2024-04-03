@@ -294,7 +294,8 @@ class KLYDV2(WxReadTaskBase):
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
 
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
-            if article_url != "close" and ("chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url)):
+            if article_url != "close" and (
+                    "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url)):
                 self.logger.info(f"🟡 出现包含检测特征的文章链接，走推送通道")
                 is_need_push = True
             elif article_url != "close" and biz_match and biz_match.group(1) in self.detected_biz_data:
@@ -315,9 +316,11 @@ class KLYDV2(WxReadTaskBase):
                 is_need_push = True
             elif ret_count == 4:
                 # 表示正处于检测中
-                self.logger.info(f"🟡 此次检测结果为：{res_model.success_msg},以防万一，下一篇仍然推送")
+                self.logger.info(f"🟡 此次检测结果为：{res_model.success_msg}")
+                if self.just_in_case:
+                    self.logger.info(f"🟡 “以防万一”已开启，下一篇仍然推送")
+                    is_need_push = True
                 is_sleep = False
-                is_need_push = True
             elif ret_count == 3 and res_model.jkey is not None:
                 # 如果是3个，且有jkey返回，则表示已经通过检测
                 if "成功" in res_model.success_msg:
@@ -538,6 +541,13 @@ class KLYDV2(WxReadTaskBase):
         :return:
         """
         return self.request_for_redirect(self.entry_url, "请求入口链接， main_client", client=self.main_client)
+
+    @property
+    def just_in_case(self):
+        ret = self.config_data.just_in_case
+        if ret is None:
+            ret = self.account_config.just_in_case
+        return ret if ret is not None else True
 
     @property
     def withdraw_type(self):

@@ -25,6 +25,7 @@ from utils.logger_utils import NestedLogColors
 class CommonKLYDConfig(BaseModel):
     """可乐阅读全局和局部的相同配置"""
     withdraw_type: str = Field(None, description="提现类型: wx 微信, ali 支付宝")
+    just_in_case: bool | None = Field(None, description="以防万一开关")
 
 
 class KLYDAccount(CommonPartConfig, CommonKLYDConfig):
