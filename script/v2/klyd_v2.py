@@ -265,7 +265,7 @@ class KLYDV2(WxReadTaskBase):
         is_need_push = False
         is_pushed = False
         retry_count = 2
-        turn_count = (self.current_read_count + 1) // 30
+        turn_count = self.current_read_count // 30 + 1
         self.logger.info(f"♻️ 开始第{turn_count}轮阅读...")
         read_count = 0
         while True:
@@ -518,7 +518,7 @@ class KLYDV2(WxReadTaskBase):
             # 如果返回的信息，有以下内容，则提前进行异常抛出，避免出现其他冗余的请求
             if "下一批" in msg:
                 raise PauseReadingTurnNext(msg)
-            elif "阅读限制" in msg or "任务上限" in msg:
+            elif "阅读限制" in msg or "任务上限" in msg or "微信限制" in msg:
                 raise StopReadingNotExit(msg)
 
     def __request_for_read_url(self) -> URL:
@@ -575,6 +575,7 @@ class KLYDV2(WxReadTaskBase):
         if ret is None:
             ret = self.account_config.custom_detected_count
         return ret if ret is not None else []
+
     @property
     def current_read_count(self):
         return self._cache.get(f"current_read_count_{self.ident}")
