@@ -42,7 +42,7 @@ account_data:
   # 账号名（自定义）
   账号1:
     # 【必填】
-    # 抓包简述：开启抓包后，进入主页面，再回到抓包软件，筛选出链接中包含 get_read_url 或者 tuijian，复制其中的cookie值即可
+    # 抓包简述：开启抓包后，进入主页面，再回到抓包软件，筛选出链接中包含 user or workinfo，复制其中的cookie值即可
     cookie: "klyd_1"
     # 【必填】WxPusher中的用户UID，检测文章通知会单独发给这个微信用户
     uid: "1"
