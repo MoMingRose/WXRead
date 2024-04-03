@@ -122,8 +122,17 @@ class MMKK:
             self.account_config: MMKKAccount = account_config
             # 解析并设置用户cookie
             self.base_client.cookies = self.__parse_cookie(self.account_config.cookie)
-            logger.info(
-                f"【账号配置信息】\n> 账号名称: {name}\n> 提现方式: {self.withdraw_way}\n> 推送uid: {self.wx_pusher_uid}")
+            msg_list = [
+                f"【账号配置信息】",
+                f"> 账号名称：{name}",
+                f"> 提现方式：{self.withdraw_way}",
+            ]
+            if self.wx_pusher_uid:
+                msg_list.append(f"> 推送uid：{self.wx_pusher_uid}")
+            if self.wx_pusher_topicIds:
+                msg_list.append(f"> 推送topicIds：{self.wx_pusher_topicIds}")
+
+            logger.info("\n".join(msg_list))
             logger.info("请检查配置是否正确，任务即将3秒后开始...")
             time.sleep(3)
             # # 初始化链接
@@ -167,7 +176,7 @@ class MMKK:
             sys.exit(0)
 
     @property
-    def app_token(self):
+    def wx_pusher_token(self):
         ret = self.account_config.appToken
         if ret is None:
             ret = self.mmkk_config_data.appToken
@@ -183,7 +192,15 @@ class MMKK:
 
     @property
     def wx_pusher_uid(self):
-        return self.account_config.uid
+        ret = self.account_config.uid
+        return ret if ret is not None else []
+
+    @property
+    def wx_pusher_topicIds(self):
+        ret = self.mmkk_config_data.topicIds
+        if ret is None:
+            ret = self.account_config.topicIds
+        return ret if ret is not None else []
 
     @property
     def read_delay(self):
@@ -758,7 +775,13 @@ class MMKK:
         return response.text
 
     def wx_pusher_link(self, link) -> bool:
-        return WxPusher.push_by_uid(self.app_token, self.wx_pusher_uid, "猫猫看看阅读过检测", link)
+        return WxPusher.push_article(
+            appToken=self.wx_pusher_token,
+            title=f"猫猫看看阅读过检测",
+            link=link,
+            uids=self.wx_pusher_uid,
+            topicIds=self.wx_pusher_topicIds
+        )
 
 
 if __name__ == '__main__':
