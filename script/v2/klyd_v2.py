@@ -294,10 +294,10 @@ class KLYDV2(WxReadTaskBase):
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
 
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
-            if "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
+            if article_url != "close" and ("chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url)):
                 self.logger.info(f"🟡 出现包含检测特征的文章链接，走推送通道")
                 is_need_push = True
-            elif biz_match and biz_match.group(1) in self.detected_biz_data:
+            elif article_url != "close" and biz_match and biz_match.group(1) in self.detected_biz_data:
                 self.logger.info(f"🟡 出现已被标记的biz文章，走推送通道")
                 is_need_push = True
             # 判断此次请求后返回的键值对数量是多少
