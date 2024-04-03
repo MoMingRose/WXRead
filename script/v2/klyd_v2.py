@@ -87,8 +87,8 @@ class KLYDV2(WxReadTaskBase):
         self.base_url = f"{first_redirect_url.scheme}://{first_redirect_url.host}"
         self.base_full_url = first_redirect_url
 
-    def run(self, name):
 
+    def run(self, name):
         self.base_client.base_url = self.base_url
         self.logger.info(f"开始执行{NestedLogColors.red(name)}的任务")
         homepage_url: URL = self.__request_redirect_for_redirect()

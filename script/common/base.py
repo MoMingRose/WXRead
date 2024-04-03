@@ -23,7 +23,7 @@ from pydantic import BaseModel, ValidationError
 
 from exception.common import PauseReadingTurnNext, Exit, StopReadingNotExit, ExitWithCodeChange, CookieExpired, \
     RspAPIChanged
-from schema.klyd import KLYDAccount, KLYDConfig
+from schema.klyd import KLYDAccount
 from utils.logger_utils import ThreadLogger, NestedLogColors
 from utils.push_utils import WxPusher
 
@@ -185,7 +185,13 @@ class WxReadTaskBase(ABC):
         self.run(name)
 
     def wx_pusher_link(self, link) -> bool:
-        return WxPusher.push_by_uid(self.app_token, self.wx_pusher_uid, f"{self.CURRENT_TASK_NAME}过检测", link)
+        return WxPusher.push_article(
+            appToken=self.wx_pusher_token,
+            title=f"{self.CURRENT_TASK_NAME}过检测",
+            link=link,
+            uids=self.wx_pusher_uid,
+            topicIds=self.wx_pusher_topicIds
+        )
 
     def request_for_json(self, method: str, url: str | URL, prefix: str, *args, client: httpx.Client = None,
                          model: Type[BaseModel] = None,
@@ -399,7 +405,7 @@ class WxReadTaskBase(ABC):
         return client
 
     @property
-    def app_token(self):
+    def wx_pusher_token(self):
         ret = self.account_config.appToken
         if ret is None:
             ret = self.config_data.appToken
@@ -407,7 +413,15 @@ class WxReadTaskBase(ABC):
 
     @property
     def wx_pusher_uid(self):
-        return self.account_config.uid
+        ret = self.account_config.uid
+        return ret if ret is not None else []
+
+    @property
+    def wx_pusher_topicIds(self):
+        ret = self.config_data.topicIds
+        if ret is None:
+            ret = self.account_config.topicIds
+        return ret if ret is not None else []
 
     @property
     def read_delay(self):
@@ -469,7 +483,7 @@ class WxReadTaskBase(ABC):
         ret = self.config_data.is_log_response
         return ret if ret is not None else False
 
-    def build_base_headers(self, account_config: KLYDConfig = None):
+    def build_base_headers(self, account_config: KLYDAccount = None):
         if account_config is not None:
             ua = account_config.ua
         else:

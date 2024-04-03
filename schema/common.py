@@ -22,12 +22,14 @@ class CommonConfig(BaseModel):
     aliName: str | None = Field(None, description="支付宝账号姓名，默认为空")
     ua: str | None = Field(None, description="用户浏览器标识")
     appToken: str | None = Field(None, description="WxPusher推送通知的appToken")
+    topicIds: str | list | None = Field(None, description="WxPusher推送通知的topicIds")
     delay: CommonDelayConfig = Field(CommonDelayConfig(), description="阅读延迟时间（单位: 秒）")
     wait_next_read: bool | None = Field(None, description="是否自动等待下批阅读")
 
+
 class CommonPartConfig(CommonConfig):
     """相同的局部配置（账号配置）"""
-    uid: str
+    uid: str | None = Field(None, description="账号ID")
 
 
 class CommonGlobalConfig(CommonConfig):
