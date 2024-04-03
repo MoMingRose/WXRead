@@ -45,13 +45,13 @@
 just_in_case: true
 
 # 【选填】达到指定阅读篇数，走推送通道，默认为空
-# 功能描述：不想每一轮第一篇都走推送，则可以开启此配置项
+# 功能描述：不想每一轮第一篇都走推送，则可以开启此配置项（可以自行增加数量，不一定固定两个）
 # 配置方式 1：
-#custom_detected_count: []
+#custom_detected_count: [1, 101]
 # 配置方式 2:
 #custom_detected_count:
 #  - 1
-#  - 2
+#  - 101
 
 # 【必填】
 account_data:
