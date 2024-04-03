@@ -68,6 +68,8 @@ class KLYDV2(WxReadTaskBase):
     ARTICLE_DESC_COMPILE = re.compile(r'meta.*?og:description"\scontent="(.*?)"\s*/>', re.S)
     # 文章Biz
     ARTICLE_BIZ_COMPILE = re.compile(r"og:url.*?__biz=(.*?)&", re.S)
+    # 普通链接Biz提取
+    NORMAL_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&", re.S)
 
     def __init__(self, config_data: KLYDConfig = load_klyd_config()):
         self.detected_biz_data = config_data.biz_data
@@ -274,9 +276,11 @@ class KLYDV2(WxReadTaskBase):
                 else:
                     raise FailedPassDetect("🔴 貌似检测失败了，具体请查看上方报错原因")
             article_url = res_model.url
+
             if ret_count == 1 and article_url is None:
                 if retry_count == 0:
-                    raise NoSuchArticle("🟡 当前账号没有文章链接返回，为避免黑号和封号，已停止当前账号运行，请等待5至6分钟再运行或先手动阅读几篇再运行!")
+                    raise NoSuchArticle(
+                        "🟡 当前账号没有文章链接返回，为避免黑号和封号，已停止当前账号运行，请等待5至6分钟再运行或先手动阅读几篇再运行!")
                 is_sleep = True
                 if ret_count >= 0:
                     self.logger.war(f"🟡 返回的阅读文章链接为None, 尝试重新请求")
@@ -286,47 +290,34 @@ class KLYDV2(WxReadTaskBase):
                     part_api_path,
                     jkey=res_model.jkey
                 )
-                # is_sleep = True
-                # continue
             if article_url is None:
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
 
-            if article_url == "close" and ret_count == 2:
-                if "本轮阅读已完成" == res_model.success_msg:
-                    self.logger.info(f"🟢✔️ {res_model.success_msg}")
-                    return
-                raise FailedPassDetect(f"🟡🔴 {res_model.success_msg}")
-                # elif res_model.msg is not None and "今天已达到阅读限制" in res_model.msg:
-                #     raise FailedPassDetect("🟢⭕️ 此账号今天已达到阅读限制，请明天再来!")
-                # elif "阅读限制" in res_model.success_msg:
-                #     raise FailedPassDetect(f"🟢⭕️ {res_model.success_msg}")
-                # elif "任务上限" in res_model.success_msg:
-                #     raise FailedPassDetect(f"🟢⭕️ {res_model.success_msg}")
-                # elif res_model.is_pass_failed:
-                #     raise FailedPassDetect("🔴⭕️ 此账号今日已被标记，请明天再试!")
-                #
-                # else:
-                #     raise FailedPassDetect(f"🟡 {res_model.success_msg}")
-
-            biz_match = self.ARTICLE_BIZ_COMPILE.search(article_url)
-            # 判断链接中是否包含检测特征，或者不符合正常阅读链接
+            biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
             if "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
                 self.logger.info(f"🟡 出现包含检测特征的文章链接，走推送通道")
                 is_need_push = True
-            # 判断是否提取biz成功，并且biz包含在特征biz中
             elif biz_match and biz_match.group(1) in self.detected_biz_data:
                 self.logger.info(f"🟡 出现已被标记的biz文章，走推送通道")
                 is_need_push = True
             # 判断此次请求后返回的键值对数量是多少
-            # elif ret_count == 2:
-            #
-            #     is_need_push = True
+            elif ret_count == 2:
+                # 如果是两个，可能有以下几种情况：
+                if "本轮阅读已完成" == res_model.success_msg:
+                    self.logger.info(f"🟢✔️ {res_model.success_msg}")
+                    return
+                elif res_model.msg is not None and "今天已达到阅读限制" in res_model.msg:
+                    raise FailedPassDetect("🟢⭕️ 此账号今天已达到阅读限制，请明天再来!")
+                elif res_model.is_pass_failed:
+                    raise FailedPassDetect("🔴⭕️ 此账号今日已被标记，请明天再试!")
+                else:
+                    self.logger.war(f"🟡 出现未记录结果（可截图给作者添加），请注意：{res_model.success_msg}")
+                is_need_push = True
             elif ret_count == 4:
                 # 表示正处于检测中
-                self.logger.info(f"🟡 此次检测结果为：{res_model.success_msg}")
-            #
-            #     is_sleep = False
-            #     is_need_push = True
+                self.logger.info(f"🟡 此次检测结果为：{res_model.success_msg},以防万一，下一篇仍然推送")
+                is_sleep = False
+                is_need_push = True
             elif ret_count == 3 and res_model.jkey is not None:
                 # 如果是3个，且有jkey返回，则表示已经通过检测
                 if "成功" in res_model.success_msg:
@@ -340,11 +331,9 @@ class KLYDV2(WxReadTaskBase):
                 time.sleep(random.randint(1, 3))
                 self.__request_for_read_url()
             else:
-                is_sleep = True
+                raise Exception(f"🔴 do_read 出现未知错误，ret_count={ret_count}")
 
-            # 打印文章内容
-            self.__print_article_info(res_model.url)
-
+            # 先推送
             if is_need_push:
                 is_pushed = self.wx_pusher_link(res_model.url)
                 if not is_pushed:
@@ -359,6 +348,8 @@ class KLYDV2(WxReadTaskBase):
                 part_api_path,
                 jkey=res_model.jkey
             )
+            # 后打印
+            self.__print_article_info(res_model.url)
 
     def __print_article_info(self, article_url):
         """
