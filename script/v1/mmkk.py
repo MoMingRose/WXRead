@@ -58,13 +58,13 @@ class MMKK:
     CURRENT_SCRIPT_UPDATED = "2024-03-30"
 
     # 当前脚本适配的版本号
-    CURRENT_ARTICLE_JS_VERSION = "10.0"
+    CURRENT_ARTICLE_JS_VERSION = "11.0"
     # 当前脚本适配的基本链接
     ARTICLE_JS_DOMAIN = "https://nsr.zsf2023e458.cloud"
     # 当前脚本适配的V
     ARTICLE_JS_V = "6.0"
     # 当前脚本适配的js文件md5值
-    ARTICLE_JS_CODE_MD5 = "3e29318b3ad6de1481ec03e57fa0e27c"
+    ARTICLE_JS_CODE_MD5 = "0674299674c2c54e4c9c8111012552a7"
     # 固定的加密拼接的字符串
     ARTICLE_MD5_FIX_STR = "Lj*?Q3#pOviW"
 
