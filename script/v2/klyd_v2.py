@@ -262,12 +262,11 @@ class KLYDV2(WxReadTaskBase):
         :param full_api_path: 初始完整api路径（后面会随着阅读文章链接的不同改变）
         :return:
         """
-        is_sleep = False
         is_need_push = False
         is_pushed = False
         retry_count = 2
         while True:
-            res_model = self.__request_for_do_read_json(full_api_path, is_sleep=is_sleep, is_pushed=is_pushed)
+            res_model = self.__request_for_do_read_json(full_api_path, is_pushed=is_pushed)
             ret_count = res_model.ret_count
             if ret_count == 3 and res_model.jkey is None:
                 # 如果是3个，且没有jkey返回，则大概率就是未通过检测
@@ -320,14 +319,12 @@ class KLYDV2(WxReadTaskBase):
                 if self.just_in_case:
                     self.logger.info(f"🟡 “以防万一”已开启，下一篇仍然推送")
                     is_need_push = True
-                is_sleep = False
             elif ret_count == 3 and res_model.jkey is not None:
                 # 如果是3个，且有jkey返回，则表示已经通过检测
                 if "成功" in res_model.success_msg:
                     self.logger.info(f"🟢✅️ {res_model.success_msg}")
                 else:
                     self.logger.info(f"🟢❌️ {res_model.success_msg}")
-                is_sleep = True
                 # 没有看到要用什么，但是每次do_read都会请求2遍，故这里也添加调用
                 time.sleep(random.randint(1, 3))
                 self.__request_for_read_url()
@@ -342,7 +339,6 @@ class KLYDV2(WxReadTaskBase):
                 if not is_pushed:
                     raise FailedPushTooManyTimes()
                 is_need_push = False
-                is_sleep = True
             else:
                 is_pushed = False
 
@@ -393,16 +389,12 @@ class KLYDV2(WxReadTaskBase):
     def __request_article_page(self, article_url: str):
         return self.request_for_page(article_url, "请求文章信息 article_client", client=self.article_client)
 
-    def __request_for_do_read_json(self, do_read_full_path: str, is_pushed: bool = False,
-                                   is_sleep: bool = True) -> RspDoRead | dict:
+    def __request_for_do_read_json(self, do_read_full_path: str, is_pushed: bool = False) -> RspDoRead | dict:
 
-        if is_sleep:
-            t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
-            self.logger.info(f"等待检测完成, 💤 睡眠{t}秒" if is_pushed else f"💤 随机睡眠{t}秒")
-            # 睡眠随机时间
-            time.sleep(t)
-        else:
-            time.sleep(1)
+        t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
+        self.logger.info(f"等待检测完成, 💤 睡眠{t}秒" if is_pushed else f"💤 随机睡眠{t}秒")
+        # 睡眠随机时间
+        time.sleep(t)
 
         ret = self.request_for_json(
             "GET",
