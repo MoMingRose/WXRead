@@ -37,7 +37,7 @@ class BaseKLYDGlobalConfig(CommonGlobalConfig, CommonKLYDConfig):
     biz_data: list | None = Field(None, description="检测文章的biz")
 
 
-KLYDConfig: Type[BaseModel] = create_model(
+KLYDConfig: Type[BaseKLYDGlobalConfig] = create_model(
     'KLYDConfig',
     account_data=(Dict[str | int, KLYDAccount], {}),
     source=(str, "klyd.yaml"),

@@ -165,7 +165,7 @@ class EntryUrl:
         }).all_entry_url
 
     @classmethod
-    def get_yyrd_entry_url(cls, url: str = None, invite_url: str = None) -> str:
+    def get_yryd_entry_url(cls, url: str = None, invite_url: str = None) -> str:
         if url is None:
             url = "http://h5.eqlrqqt.cn/entry/index5?upuid=2068422"
 
@@ -224,4 +224,4 @@ class EntryUrl:
 
 
 if __name__ == "__main__":
-    print(EntryUrl.get_klrd_entry_url())
+    print(EntryUrl.get_yryd_entry_url())

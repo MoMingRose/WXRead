@@ -32,7 +32,7 @@ class BaseMMKKGlobalConfig(CommonGlobalConfig):
 
 
 # 通过 create_model() 方法创建动态键模型
-MMKKConfig: Type[BaseModel] = create_model(
+MMKKConfig: Type[BaseMMKKGlobalConfig] = create_model(
     'MMKKConfig',
     account_data=(Dict[str | int, MMKKAccount], {}),
     source=(str, "mmkk.yaml"),

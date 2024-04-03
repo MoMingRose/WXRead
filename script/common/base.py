@@ -106,14 +106,17 @@ class WxReadTaskBase(ABC):
 
     @abstractmethod
     def init_fields(self):
+        """这个方法执行在主线程中，可以用来进行账号运行前的初始化操作"""
         pass
 
     @abstractmethod
     def run(self, name):
+        """账号运行的主入口"""
         pass
 
     @abstractmethod
-    def get_entry_url(self):
+    def get_entry_url(self) -> str:
+        """返回入口链接"""
         pass
 
     def _base_run(self, name):
