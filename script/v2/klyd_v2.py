@@ -308,11 +308,9 @@ class KLYDV2(WxReadTaskBase):
                     # 睡眠
                     self.__alone_sleep_fun(False)
                     continue
-            if self.current_read_count in self.custom_detected_count:
-                self.logger.info(f"🟡 达到自定义计数数量，走推送通道!")
-                is_need_push = True
+
             # 如果经过上方重试后仍然为None，则抛出异常
-            elif article_url is None:
+            if article_url is None:
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
@@ -326,7 +324,10 @@ class KLYDV2(WxReadTaskBase):
                 is_need_push = True
             # 判断此次请求后返回的键值对数量是多少
             elif ret_count == 2:
-                is_need_push = True
+                # 判断当前阅读数量是否达到指定检测数
+                if self.current_read_count in self.custom_detected_count:
+                    self.logger.info(f"🟡 达到自定义计数数量，走推送通道!")
+                    is_need_push = True
             elif ret_count == 4:
                 # 表示正处于检测中
                 self.logger.info(f"🟡 此次检测结果为：{res_model.success_msg}")
