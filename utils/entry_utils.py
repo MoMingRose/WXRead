@@ -186,7 +186,7 @@ class EntryUrl:
             }, {
                 "name": "猫猫看看",
                 "url": "https://code.sywjmlou.com.cn/",
-                "invite_url": "http://o1up.ieazq.shop/haobaobao/auth/c5aab76cbaa0d0c80ec1ade47b3ce520"
+                "invite_url": "http://72484f04031828d9e5.kgiuitq.cn/haobaobao/auth/f5097609e2ff70f696af4c1ed8b3ed4e"
             }, {
                 "name": "可乐读书",
                 "url": "http://m.fbjcoru.cn/entry?upuid=1316875",

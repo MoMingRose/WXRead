@@ -26,4 +26,9 @@ new Env("可乐读书");
 from script.v2.klyd_v2 import KLYDV2
 
 if __name__ == '__main__':
-    KLYDV2()
+    # TODO: 记得修改这里的固定版本号
+    # 上面的TODO 主要用于提醒我上传的时候更改版本号
+    if KLYDV2.CURRENT_SCRIPT_VERSION != "2.0.1":
+        print(f"当前最新猫猫版本为{KLYDV2.CURRENT_SCRIPT_VERSION}, 请重新拉库以更新!")
+    else:
+        KLYDV2()

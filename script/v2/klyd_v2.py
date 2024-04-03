@@ -36,6 +36,8 @@ class APIS:
 
 
 class KLYDV2(WxReadTaskBase):
+    # TODO: 记得修改这里的固定版本号
+    # 上面的TODO 主要用于提醒我上传的时候更改版本号
     CURRENT_SCRIPT_VERSION = "2.0.1"
     CURRENT_TASK_NAME = "可乐阅读"
 
