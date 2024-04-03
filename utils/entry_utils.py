@@ -177,7 +177,7 @@ class EntryUrl:
         }).all_entry_url
 
     @classmethod
-    def get_all_entry_url(cls, *data: dict | List[dict]) -> list:
+    def get_all_entry_url(cls, *data: dict | List[dict], is_flag: bool = False) -> list | dict:
         if not data:
             data = [{
                 "name": "小阅阅",
@@ -198,6 +198,8 @@ class EntryUrl:
                 "reg": r"url_h51[.\s=']*(http\S+)'",
                 "type": 1
             }]
+        if is_flag:
+            return EntryUrl(data)._result
 
         return EntryUrl(data).all_entry_url
 
