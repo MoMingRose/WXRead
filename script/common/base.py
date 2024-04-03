@@ -37,7 +37,7 @@ class WxReadTaskBase(ABC):
     # 当前脚本创建时间
     CURRENT_SCRIPT_CREATED = "2024-04-01"
     # 当前脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04-01"
+    CURRENT_SCRIPT_UPDATED = "2024-04-03"
     # 当前任务名称
     CURRENT_TASK_NAME = "微信阅读任务"
     # 缓存
@@ -306,7 +306,7 @@ class WxReadTaskBase(ABC):
             if len(ret_data) == 1:
                 return ret_data[0]
             return ret_data
-        except httpx.ReadTimeout as e:
+        except httpx.ConnectTimeout as e:
             self.logger.error(f"请求超时, 剩余重试次数：{retry_count}")
             if retry_count > 0:
                 if flag:
