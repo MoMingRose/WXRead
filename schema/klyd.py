@@ -26,7 +26,7 @@ class CommonKLYDConfig(BaseModel):
     """可乐阅读全局和局部的相同配置"""
     withdraw_type: str = Field(None, description="提现类型: wx 微信, ali 支付宝")
     just_in_case: bool | None = Field(None, description="以防万一开关")
-
+    custom_detected_count: list | None = Field(None, description="达到指定阅读篇数走推送通道")
 
 class KLYDAccount(CommonPartConfig, CommonKLYDConfig):
     """账号配置（局部配置）"""
