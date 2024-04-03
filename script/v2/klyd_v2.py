@@ -338,6 +338,7 @@ class KLYDV2(WxReadTaskBase):
                 if "成功" in res_model.success_msg:
                     # 当前阅读篇数自增1
                     self.current_read_count += 1
+                    read_count += 1
                     self.logger.info(f"🟢✅️ {res_model.success_msg}")
                 else:
                     self.logger.info(f"🟢❌️ {res_model.success_msg}")
