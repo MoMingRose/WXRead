@@ -350,7 +350,7 @@ class WxReadTaskBase(ABC):
             if len(ret_data) == 1:
                 return ret_data[0]
             return ret_data
-        except httpx.ConnectTimeout as e:
+        except (httpx.ConnectTimeout, httpx.ReadTimeout) as e:
             self.logger.error(f"请求超时, 剩余重试次数：{retry_count}")
             if retry_count > 0:
                 if flag:
