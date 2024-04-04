@@ -55,7 +55,7 @@ class WxReadTaskBase(ABC):
         self.base_headers = self.build_base_headers()
         self.global_kwargs = kwargs
         # 构建主线程客户端
-        self.main_client = httpx.Client(headers=self.base_headers, timeout=10, verify=kwargs.pop("main_client_verify"))
+        self.main_client = httpx.Client(headers=self.base_headers, timeout=10)
         # # 构建基本客户端
         # self.base_client = httpx.Client(headers=self.base_headers, timeout=10)
 
