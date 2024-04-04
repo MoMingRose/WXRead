@@ -91,9 +91,10 @@ class LTWMV2(WxReadTaskBase):
                 else:
                     self.logger.war(f"检测到阅读任务待完成，3秒后开始执行...")
                     time.sleep(3)
-
-                    self.__do_read_task()
-
+                    try:
+                        self.__do_read_task()
+                    except Exception as e:
+                        self.logger.war(f"🟡 {e}")
             if "每日签到" in data.name:
                 if data.status != 2:
                     self.logger.war(f"检测到签到任务待完成，3秒后开始执行...")
