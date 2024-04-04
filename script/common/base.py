@@ -230,6 +230,7 @@ class WxReadTaskBase(ABC):
             article_author=article_author,
             article_desc=article_desc
         )
+        return article_info
 
     def wx_pusher(self, link, detecting_count: int = None) -> bool:
         """
