@@ -352,6 +352,8 @@ class KLYDV2(WxReadTaskBase):
 
             # 先推送
             if is_need_push:
+                read_count += 1
+                self.current_read_count += 1
                 push_types = self.push_types
                 push_result = []
                 if 1 in push_types:
