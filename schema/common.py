@@ -11,20 +11,31 @@ from pydantic import BaseModel, Field
 
 class CommonDelayConfig(BaseModel):
     """延迟配置"""
-    read_delay: list = Field([10, 20], description="阅读延迟时间（单位: 秒）")
-    push_delay: list = Field([19], description="推送延迟时间（单位: 秒）")
+    read_delay: list | None = Field(None, description="阅读延迟时间（单位: 秒）")
+    push_delay: list | None = Field(None, description="推送延迟时间（单位: 秒）")
 
 
 class CommonConfig(BaseModel):
     """相同的全局和局部配置（任务和任务账号配置）"""
+    init_colorama: bool = Field(True, description="是否初始化colorama，当此项为True青龙面板的颜色渲染会消失，这样或许可以避免不支持颜色显示的青龙面板出现乱码的现象")
     withdraw: float = Field(0, description="提现金额（单位: 元），表示只有大于等于这个数才可以提现")
     aliAccount: str | None = Field(None, description="支付宝账号，默认为空")
     aliName: str | None = Field(None, description="支付宝账号姓名，默认为空")
     ua: str | None = Field(None, description="用户浏览器标识")
+    delay: CommonDelayConfig = Field(None, description="阅读延迟时间（单位: 秒）")
+    wait_next_read: bool | None = Field(None, description="是否自动等待下批阅读")
+    custom_detected_count: list | None = Field(None, description="达到指定阅读篇数走推送通道")
+    push_types: list | None = Field(None, description="推送通道类型 1: WxPusher 2: WxBusinessPusher")
+    # WxPusher
     appToken: str | None = Field(None, description="WxPusher推送通知的appToken")
     topicIds: str | list | None = Field(None, description="WxPusher推送通知的topicIds")
-    delay: CommonDelayConfig = Field(CommonDelayConfig(), description="阅读延迟时间（单位: 秒）")
-    wait_next_read: bool | None = Field(None, description="是否自动等待下批阅读")
+    # WxBusinessPusher Robot
+    use_robot: bool | None = Field(None, description="是否使用企业微信机器人推送")
+    webhook_url: str | None = Field(None, description="企业微信机器人推送通知的webhook_url")
+    # WxBusinessPusher
+    corp_id: int | None = Field(None, description="企业微信推送通知的企业ID")
+    corp_secret: str | None = Field(None, description="企业微信推送通知的应用密钥")
+    agent_id: int | None = Field(None, description="企业微信推送通知的应用ID")
 
 
 class CommonPartConfig(CommonConfig):

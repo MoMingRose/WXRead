@@ -9,7 +9,7 @@ import logging
 import os
 import threading
 
-from colorama import Fore, Style
+from colorama import Fore, Style, init
 from httpx import Response
 from pydantic import BaseModel
 
@@ -19,6 +19,8 @@ try:
     import ujson as json
 except ModuleNotFoundError:
     import json
+
+
 
 logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
 
@@ -74,7 +76,9 @@ class NestedLogColors:
 
 
 class Logger:
-    def __init__(self, name: str, fh_level=logging.DEBUG, ch_level=logging.INFO):
+    def __init__(self, name: str, fh_level=logging.DEBUG, ch_level=logging.INFO, is_init_colorama=True):
+        if is_init_colorama:
+            init()
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
         path_dir = os.path.join(logs_dir, name)
@@ -219,8 +223,8 @@ class Logger:
 
 
 class ThreadLogger(Logger):
-    def __init__(self, name: str, thread2name: dict = None):
-        super().__init__(name)
+    def __init__(self, name: str, thread2name: dict = None, is_init_colorama: bool = True):
+        super().__init__(name, is_init_colorama=is_init_colorama)
         self.thread2name = thread2name
 
     @property

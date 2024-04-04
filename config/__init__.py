@@ -14,32 +14,10 @@ from pydantic import BaseModel
 
 from schema.klyd import KLYDConfig
 from schema.mmkk import MMKKConfig
+from schema.yryd import YRYDConfig
+from utils import md5
 
 root_dir = os.path.dirname(__file__)
-
-
-def load_mmkk_config() -> MMKKConfig:
-    """
-    加载猫猫看看阅读的配置
-    :return:
-    """
-    return __load_config("猫猫看看", "mmkk", MMKKConfig)
-
-
-def load_klyd_config() -> KLYDConfig:
-    """
-    加载猫猫看看阅读的配置
-    :return:
-    """
-    data: KLYDConfig = __load_config("可乐阅读", "klyd", KLYDConfig)
-    if data.biz_data is None:
-        data.biz_data = ["MzkwNTY1MzYxOQ=="]
-        # 给yaml中没有配置biz_data的自动添加
-        with open(os.path.join(root_dir, "klyd.yaml"), "a", encoding="utf-8") as fp:
-            fp.write("\nbiz_data:\n")
-            for i in data.biz_data:
-                fp.write(f"  - \"{i}\"\n")
-    return data
 
 
 def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwargs) -> any:
@@ -62,7 +40,11 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
         raise FileNotFoundError(msg)
 
     with open(common_path, "r", encoding="utf-8") as fp:
-        config_data = yaml.safe_load(fp)
+        try:
+            config_data = yaml.safe_load(fp)
+        except (IOError, yaml.YAMLError):
+            msg = f"【{task_name}任务】配置文件内容有误\n> 参考内容：{filename}_example.yaml\n> 路径：{example_file_path}"
+            raise ValueError(msg)
 
     with open(path, "r", encoding="utf-8") as fp:
         data = yaml.safe_load(fp)
@@ -75,6 +57,94 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
         config_data.update(data)
 
     return model(**config_data, source=path, **kwargs)
+
+
+def load_mmkk_config() -> MMKKConfig:
+    """
+    加载猫猫看看阅读的配置
+    :return:
+    """
+    return __load_config("猫猫看看", "mmkk", MMKKConfig)
+
+
+def load_klyd_config() -> KLYDConfig:
+    """
+    加载可乐阅读的配置
+    :return:
+    """
+    data: KLYDConfig = __load_config("可乐阅读", "klyd", KLYDConfig)
+    if data.biz_data is None:
+        data.biz_data = ["MzkwNTY1MzYxOQ=="]
+        # 给yaml中没有配置biz_data的自动添加
+        with open(os.path.join(root_dir, "klyd.yaml"), "a", encoding="utf-8") as fp:
+            fp.write("\nbiz_data:\n")
+            for i in data.biz_data:
+                fp.write(f"  - \"{i}\"\n")
+    return data
+
+
+def load_yryd_config() -> YRYDConfig:
+    """
+    加载鱼儿阅读的配置
+    :return:
+    """
+    return __load_config("鱼儿阅读", "yryd", YRYDConfig)
+
+
+cache_dir = os.path.join(root_dir, "cache")
+
+cache_file_path = os.path.join(root_dir, "cache", "cache.yaml")
+
+
+def storage_cache_config(cache_data: dict, file_path: str = None) -> None:
+    """
+    将新的缓存数据与现有数据合并后写入缓存配置文件中
+
+    :param cache_data: 要合并的缓存数据
+    :param file_path: 缓存配置文件的路径
+    :return: None
+    """
+    if file_path is None:
+        file_path = cache_file_path
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                existing_data = yaml.safe_load(f) or {}
+            existing_data.update(cache_data)
+
+        with open(file_path, "w", encoding="utf-8") as fp:
+            yaml.dump(existing_data, fp)
+    except (IOError, yaml.YAMLError) as e:
+        print(f"缓存文件更新失败: {e}")
+
+
+def load_wx_business_access_token(corp_id: int, agent_id: int, file_path: str = None) -> str:
+    """
+    从缓存配置文件中加载指定corp_id和agent_id的access_token
+
+    :param corp_id: 企业ID
+    :param agent_id: 应用ID
+    :param file_path: 缓存配置文件的路径
+    :return: access_token
+    """
+    try:
+        if file_path is None:
+            file_path = cache_file_path
+
+        with open(file_path, "r", encoding="utf-8") as fp:
+            cache_data = yaml.safe_load(fp) or {}
+
+        key = md5(f"{corp_id}_{agent_id}")
+
+        access_token = cache_data["wxBusiness"][key].get("accessToken")
+
+        if access_token is None:
+            raise KeyError(f"未找到对应配置项数据 corp_id={corp_id}, agent_id={agent_id}")
+
+        return access_token
+    except (IOError, yaml.YAMLError) as e:
+        # 这里抛出KeyError异常，方便 推送方法 中的 在线获取token
+        raise KeyError(f"缓存文件读取失败: {e}")
 
 
 if __name__ == '__main__':

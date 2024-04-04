@@ -36,15 +36,13 @@ class APIS:
 
 
 class KLYDV2(WxReadTaskBase):
-    # TODO: 记得修改这里的固定版本号
-    # 上面的TODO 主要用于提醒我上传的时候更改版本号
-    CURRENT_SCRIPT_VERSION = "2.0.1"
+    CURRENT_SCRIPT_VERSION = "2.0.2"
     CURRENT_TASK_NAME = "可乐阅读"
 
     # 当前脚本创建时间
     CURRENT_SCRIPT_CREATED = "2024-03-30"
     # 当前脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04-02"
+    CURRENT_SCRIPT_UPDATED = "2024-04-04"
 
     CURRENT_R_JS_VERSION = "5"
 
@@ -86,7 +84,6 @@ class KLYDV2(WxReadTaskBase):
         first_redirect_url: URL = self.__request_entry_for_redirect()
         self.base_url = f"{first_redirect_url.scheme}://{first_redirect_url.host}"
         self.base_full_url = first_redirect_url
-
 
     def run(self, name):
         self.base_client.base_url = self.base_url
@@ -268,13 +265,13 @@ class KLYDV2(WxReadTaskBase):
         is_pushed = False
         retry_count = 2
         turn_count = self.current_read_count // 30 + 1
-        self.logger.info(f"♻️ 开始第{turn_count}轮阅读...")
+        self.logger.info(f"🔘🔄 当前是第【{turn_count}】轮阅读")
         read_count = 0
         while True:
             if self.current_read_count != 0:
-                msg = f"准备阅读{turn_count}轮第{read_count + 1}篇, 已阅读{self.current_read_count}篇"
+                msg = f"🔳️💠 准备阅读第【{turn_count} - {read_count + 1}】篇, 已成功阅读【{self.current_read_count}】篇"
             else:
-                msg = f"准备阅读{turn_count}轮第{read_count + 1}篇"
+                msg = f"🔳️💠准备阅读【{turn_count} - {read_count + 1}】篇"
             self.logger.info(msg)
             # 发起完成阅读请求，从而获取下一次阅读的文章链接
             res_model = self.__request_for_do_read_json(full_api_path, is_pushed=is_pushed)
@@ -316,8 +313,11 @@ class KLYDV2(WxReadTaskBase):
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
+            if (self.current_read_count + 1) in self.custom_detected_count:
+                self.logger.info(f"🟡 达到自定义计数数量，走推送通道!")
+                is_need_push = True
             # 判断是否是检测文章
-            if "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
+            elif "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
                 self.logger.info(f"🟡 出现包含检测特征的文章链接，走推送通道!")
                 is_need_push = True
             # 判断是否是检测文章
@@ -327,7 +327,7 @@ class KLYDV2(WxReadTaskBase):
             # 判断此次请求后返回的键值对数量是多少
             elif ret_count == 2:
                 # 判断当前阅读数量是否达到指定检测数
-                if self.current_read_count in self.custom_detected_count:
+                if (self.current_read_count + 1) in self.custom_detected_count:
                     self.logger.info(f"🟡 达到自定义计数数量，走推送通道!")
                     is_need_push = True
             elif ret_count == 4:
@@ -355,7 +355,22 @@ class KLYDV2(WxReadTaskBase):
 
             # 先推送
             if is_need_push:
-                is_pushed = self.wx_pusher_link(res_model.url)
+                push_types = self.push_types
+                push_result = []
+                if 1 in push_types:
+                    push_result.append(self.wx_pusher(res_model.url, detecting_count=self.current_read_count + 1))
+                if 2 in push_types:
+                    push_result.append(self.wx_business_pusher(
+                        res_model.url,
+                        detecting_count=self.current_read_count + 1,
+                        situation=(
+                        self.logger.name, turn_count, read_count, self.current_read_count, self.current_read_count + 1),
+                        tips=f"请尽快在指定时间{self.push_delay[0]}秒内阅读完此篇文章"
+                    ))
+
+                # 只要其中任意一个推送成功，则赋值为True
+                is_pushed = any(push_result)
+
                 if not is_pushed:
                     raise FailedPushTooManyTimes()
                 is_need_push = False
@@ -406,13 +421,14 @@ class KLYDV2(WxReadTaskBase):
             article_desc = r.group(1)
         else:
             article_desc = ""
-        self.logger.info(ArticleInfo(
+        article_info = ArticleInfo(
             article_url=article_url,
             article_biz=article_biz,
             article_title=article_title,
             article_author=article_author,
             article_desc=article_desc
-        ))
+        )
+        self.logger.info(f"【第 {self.current_read_count + 1} 篇文章信息】\n{article_info}")
 
     def __request_article_page(self, article_url: str):
         return self.request_for_page(article_url, "请求文章信息 article_client", client=self.article_client)

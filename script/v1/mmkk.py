@@ -53,11 +53,11 @@ class MMKK:
     # TODO: 记得修改这里的固定版本号
     # 上面的TODO 主要用于提醒我上传的时候更改版本号
     # 当前脚本版本号
-    CURRENT_SCRIPT_VERSION = "0.1"
+    CURRENT_SCRIPT_VERSION = "1.0.2"
     # 当前脚本作者
     CURRENT_SCRIPT_AUTHOR = "MoMingLog"
     # 脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04.03"
+    CURRENT_SCRIPT_UPDATED = "2024-04.04"
 
     # 当前脚本适配的版本号
     CURRENT_ARTICLE_JS_VERSION = "11.0"
@@ -131,6 +131,7 @@ class MMKK:
                 msg_list.append(f"> 推送uid：{self.wx_pusher_uid}")
             if self.wx_pusher_topicIds:
                 msg_list.append(f"> 推送topicIds：{self.wx_pusher_topicIds}")
+
 
             logger.info("\n".join(msg_list))
             logger.info("请检查配置是否正确，任务即将3秒后开始...")

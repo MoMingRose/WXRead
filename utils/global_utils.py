@@ -24,5 +24,7 @@ def md5(content):
     return m.hexdigest()
 
 
-def get_date():
+def get_date(is_fill_chinese=False):
+    if is_fill_chinese:
+        return time.strftime("%Y年%m月%d日 %H时%M分%S秒", time.localtime())
     return time.strftime("%Y-%m-%d", time.localtime())

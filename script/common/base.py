@@ -25,7 +25,7 @@ from exception.common import PauseReadingTurnNext, Exit, StopReadingNotExit, Exi
     RspAPIChanged
 from schema.klyd import KLYDAccount
 from utils.logger_utils import ThreadLogger, NestedLogColors
-from utils.push_utils import WxPusher
+from utils.push_utils import WxPusher, WxBusinessPusher
 
 
 class WxReadTaskBase(ABC):
@@ -62,7 +62,8 @@ class WxReadTaskBase(ABC):
         self.thread2name = {
             "is_log_response": self.is_log_response,
         }
-        self.logger = ThreadLogger(logger_name, thread2name=self.thread2name)
+        self.logger = ThreadLogger(logger_name, thread2name=self.thread2name,
+                                   is_init_colorama=self.config_data.init_colorama)
 
         self.init_fields()
 
@@ -184,14 +185,51 @@ class WxReadTaskBase(ABC):
         self.logger.info(f"🟢 程序已睡眠结束")
         self.run(name)
 
-    def wx_pusher_link(self, link) -> bool:
+    def wx_pusher(self, link, detecting_count: int = None) -> bool:
+        """
+        通过WxPusher推送
+        :param link:
+        :param detecting_count:
+        :return:
+        """
+        if detecting_count is None:
+            s = f"{self.CURRENT_TASK_NAME}过检测"
+        else:
+            s = f"{self.CURRENT_TASK_NAME}-{detecting_count}过检测"
         return WxPusher.push_article(
             appToken=self.wx_pusher_token,
-            title=f"{self.CURRENT_TASK_NAME}过检测",
+            title=s,
             link=link,
             uids=self.wx_pusher_uid,
             topicIds=self.wx_pusher_topicIds
         )
+
+    def wx_business_pusher(self, link, detecting_count: int = None, **kwargs) -> bool:
+        """
+        通过企业微信推送
+        :param link:
+        :param detecting_count:
+        :param kwargs:
+        :return:
+        """
+        if detecting_count is None:
+            s = f"{self.CURRENT_TASK_NAME}过检测"
+        else:
+            s = f"{self.CURRENT_TASK_NAME}-{detecting_count}过检测"
+        if self.wx_business_use_robot:
+            return WxBusinessPusher.push_article_by_robot(
+                self.wx_business_webhook_url,
+                s,
+                link, **kwargs)
+        else:
+            return WxBusinessPusher.push_article_by_agent(
+                self.wx_business_corp_id,
+                self.wx_business_corp_secret,
+                self.wx_business_agent_id,
+                title=s,
+                link=link,
+                **kwargs
+            )
 
     def request_for_json(self, method: str, url: str | URL, prefix: str, *args, client: httpx.Client = None,
                          model: Type[BaseModel] = None,
@@ -336,6 +374,48 @@ class WxReadTaskBase(ABC):
             self.lock.release()
 
     @property
+    def wx_business_use_robot(self):
+        ret = self.account_config.use_robot
+        if ret is None:
+            ret = self.config_data.use_robot
+        return ret if ret is not None else True
+
+    @property
+    def wx_business_webhook_url(self):
+        ret = self.account_config.webhook_url
+        if ret is None:
+            ret = self.config_data.webhook_url
+        return ret
+
+    @property
+    def wx_business_corp_id(self):
+        ret = self.account_config.corp_id
+        if ret is None:
+            ret = self.config_data.corp_id
+        return ret
+
+    @property
+    def wx_business_agent_id(self):
+        ret = self.account_config.agent_id
+        if ret is None:
+            ret = self.config_data.agent_id
+        return ret
+
+    @property
+    def wx_business_corp_secret(self):
+        ret = self.account_config.corp_secret
+        if ret is None:
+            ret = self.config_data.corp_secret
+        return ret
+
+    @property
+    def push_types(self):
+        ret = self.account_config.push_types
+        if ret is None:
+            ret = self.config_data.push_types
+        return ret if ret is not None else [1]
+
+    @property
     def is_wait_next_read(self):
         """是否等待下次读取"""
         ret = self.account_config.wait_next_read
@@ -425,14 +505,40 @@ class WxReadTaskBase(ABC):
 
     @property
     def read_delay(self):
+        ret = [10, 20]
+
         delay = self.account_config.delay
-        ret = delay.read_delay if delay is not None else self.config_data.delay.read_delay
+        if delay is None:
+            delay = self.config_data.delay
+
+        _push_delay = delay.push_delay
+        _len = len(_push_delay)
+
+        if _push_delay is not None:
+            if _len == 2:
+                _min = min(_push_delay)
+                _max = max(_push_delay)
+                ret = [_min, _max]
+            else:
+                _max = max(ret)
+                ret = [10, _max]
         return ret
 
     @property
     def push_delay(self):
+        ret = [19]
+
         delay = self.account_config.delay
-        ret = delay.push_delay if delay is not None else self.config_data.delay.push_delay
+        if delay is None:
+            delay = self.config_data.delay
+
+        _read_delay = delay.read_delay
+        _len = len(_read_delay)
+
+        if _read_delay is not None:
+            if _len != 1:
+                _max = max(_read_delay)
+                ret = [_max] if _max > 19 else [19]
         return ret
 
     @property
