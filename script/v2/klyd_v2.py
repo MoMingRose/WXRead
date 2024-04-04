@@ -266,12 +266,12 @@ class KLYDV2(WxReadTaskBase):
         retry_count = 2
         turn_count = self.current_read_count // 30 + 1
         self.logger.war(f"🟡 当前是第[{turn_count}]轮阅读")
-        read_count = self.current_read_count - self.current_read_count // 30
+        read_count = self.current_read_count % 30 + 1
         while True:
             if self.current_read_count != 0:
-                msg = f"🟡 准备阅读第[{turn_count} - {read_count + 1}]篇, 已成功阅读[{self.current_read_count}]篇"
+                msg = f"🟡 准备阅读第[{turn_count} - {read_count}]篇, 已成功阅读[{self.current_read_count}]篇"
             else:
-                msg = f"🟡 准备阅读[{turn_count} - {read_count + 1}]篇"
+                msg = f"🟡 准备阅读[{turn_count} - {read_count}]篇"
             self.logger.war(msg)
             # 发起完成阅读请求，从而获取下一次阅读的文章链接
             res_model = self.__request_for_do_read_json(full_api_path, is_pushed=is_pushed)
@@ -313,7 +313,8 @@ class KLYDV2(WxReadTaskBase):
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
-            if (self.current_read_count + 1) in self.custom_detected_count:
+            # 判断下一篇阅读计数是否达到指定检测数
+            if read_count in self.custom_detected_count:
                 self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                 is_need_push = True
             # 判断是否是检测文章
@@ -326,8 +327,8 @@ class KLYDV2(WxReadTaskBase):
                 is_need_push = True
             # 判断此次请求后返回的键值对数量是多少
             elif ret_count == 2:
-                # 判断当前阅读数量是否达到指定检测数
-                if (self.current_read_count + 1) in self.custom_detected_count:
+                # 判断下一篇阅读计数是否达到指定检测数
+                if read_count in self.custom_detected_count:
                     self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                     is_need_push = True
             elif ret_count == 4:
@@ -358,13 +359,13 @@ class KLYDV2(WxReadTaskBase):
                 push_types = self.push_types
                 push_result = []
                 if 1 in push_types:
-                    push_result.append(self.wx_pusher(res_model.url, detecting_count=self.current_read_count + 1))
+                    push_result.append(self.wx_pusher(res_model.url, detecting_count=read_count))
                 if 2 in push_types:
                     push_result.append(self.wx_business_pusher(
                         res_model.url,
-                        detecting_count=self.current_read_count + 1,
+                        detecting_count=read_count,
                         situation=(
-                        self.logger.name, turn_count, read_count, self.current_read_count, self.current_read_count + 1),
+                            self.logger.name, turn_count, read_count - 1, self.current_read_count, read_count),
                         tips=f"请尽快在指定时间{self.push_delay[0]}秒内阅读完此篇文章"
                     ))
 

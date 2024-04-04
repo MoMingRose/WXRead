@@ -127,7 +127,7 @@ class WxReadTaskBase(ABC):
         try:
             self.run(name)
         except StopReadingNotExit as e:
-            self.logger.info(f"🔘 {e}")
+            self.logger.war(f"🟡 {e}")
             return
         except (RspAPIChanged, ExitWithCodeChange) as e:
             self.logger.error(e)
