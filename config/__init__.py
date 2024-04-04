@@ -14,7 +14,6 @@ from pydantic import BaseModel
 
 from schema.klyd import KLYDConfig
 from schema.mmkk import MMKKConfig
-from schema.yryd import YRYDConfig
 from utils import md5
 
 root_dir = os.path.dirname(__file__)
@@ -81,14 +80,6 @@ def load_klyd_config() -> KLYDConfig:
             for i in data.biz_data:
                 fp.write(f"  - \"{i}\"\n")
     return data
-
-
-def load_yryd_config() -> YRYDConfig:
-    """
-    加载鱼儿阅读的配置
-    :return:
-    """
-    return __load_config("鱼儿阅读", "yryd", YRYDConfig)
 
 
 cache_dir = os.path.join(root_dir, "cache")
