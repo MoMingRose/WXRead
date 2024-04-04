@@ -265,14 +265,14 @@ class KLYDV2(WxReadTaskBase):
         is_pushed = False
         retry_count = 2
         turn_count = self.current_read_count // 30 + 1
-        self.logger.info(f"🔘🔄 当前是第【{turn_count}】轮阅读")
-        read_count = 0
+        self.logger.war(f"🟡 当前是第[{turn_count}]轮阅读")
+        read_count = self.current_read_count - self.current_read_count // 30
         while True:
             if self.current_read_count != 0:
-                msg = f"🔳️💠 准备阅读第【{turn_count} - {read_count + 1}】篇, 已成功阅读【{self.current_read_count}】篇"
+                msg = f"🟡 准备阅读第[{turn_count} - {read_count + 1}]篇, 已成功阅读[{self.current_read_count}]篇"
             else:
-                msg = f"🔳️💠准备阅读【{turn_count} - {read_count + 1}】篇"
-            self.logger.info(msg)
+                msg = f"🟡 准备阅读[{turn_count} - {read_count + 1}]篇"
+            self.logger.war(msg)
             # 发起完成阅读请求，从而获取下一次阅读的文章链接
             res_model = self.__request_for_do_read_json(full_api_path, is_pushed=is_pushed)
             # 获取有效的返回个数
@@ -314,27 +314,27 @@ class KLYDV2(WxReadTaskBase):
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
             if (self.current_read_count + 1) in self.custom_detected_count:
-                self.logger.info(f"🟡 达到自定义计数数量，走推送通道!")
+                self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                 is_need_push = True
             # 判断是否是检测文章
             elif "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
-                self.logger.info(f"🟡 出现包含检测特征的文章链接，走推送通道!")
+                self.logger.war(f"🟡 出现包含检测特征的文章链接，走推送通道!")
                 is_need_push = True
             # 判断是否是检测文章
             elif biz_match and biz_match.group(1) in self.detected_biz_data:
-                self.logger.info(f"🟡 出现已被标记的biz文章，走推送通道!")
+                self.logger.war(f"🟡 出现已被标记的biz文章，走推送通道!")
                 is_need_push = True
             # 判断此次请求后返回的键值对数量是多少
             elif ret_count == 2:
                 # 判断当前阅读数量是否达到指定检测数
                 if (self.current_read_count + 1) in self.custom_detected_count:
-                    self.logger.info(f"🟡 达到自定义计数数量，走推送通道!")
+                    self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                     is_need_push = True
             elif ret_count == 4:
                 # 表示正处于检测中
                 self.logger.info(f"🟡 此次检测结果为：{res_model.success_msg}")
                 if self.just_in_case:
-                    self.logger.info(f"🟡 “以防万一”已开启，下一篇仍然推送")
+                    self.logger.war(f"🟡 “以防万一”已开启，下一篇仍然推送")
                     is_need_push = True
             elif ret_count == 3 and res_model.jkey is not None:
                 # 如果是3个，且有jkey返回，则表示已经通过检测
@@ -344,7 +344,7 @@ class KLYDV2(WxReadTaskBase):
                     read_count += 1
                     self.logger.info(f"🟢✅️ {res_model.success_msg}")
                 else:
-                    self.logger.info(f"🟢❌️ {res_model.success_msg}")
+                    self.logger.error(f"🟢❌️ {res_model.success_msg}")
                 # 没有看到要用什么，但是每次do_read都会请求2遍，故这里也添加调用
                 time.sleep(random.randint(1, 3))
                 self.__request_for_read_url()

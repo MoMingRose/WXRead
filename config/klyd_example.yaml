@@ -73,6 +73,10 @@
 # 功能描述：设置线程池的最大线程数，每个线程可以单独跑一个账号
 #max_thread_count: 1
 
+# 【选填】提现额度限制（可单独配置）
+# 功能描述：只有达到或者大于这个金额才允许提现
+#withdraw: 0.9
+
 # 【选填】提现方式：wx or ali （可单独配置）
 # 功能描述：wx表示微信提现，ali表示支付宝提现
 #withdraw_type: wx
@@ -94,6 +98,8 @@ just_in_case: true
 #custom_detected_count:
 #  - 1
 #  - 101
+
+
 
 # 【必填】
 account_data:

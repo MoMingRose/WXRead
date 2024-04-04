@@ -229,7 +229,6 @@ class WxBusinessPusher:
         p = httpx.get(url=url, verify=False)
         access_token = p.json()["access_token"]
         key = md5(f"{corp_id}_{agent_id}")
-        print("进来了")
         # 缓存token
         storage_cache_config({
             "wxBusiness": {
