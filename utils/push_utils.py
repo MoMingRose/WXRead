@@ -90,7 +90,8 @@ class WxBusinessPusher:
         return "\n".join(msg_list)
 
     @staticmethod
-    def push_article_by_robot(webhook: str, title: str, link: str, situation: str | tuple, tips: str, **kwargs):
+    def push_article_by_robot(webhook: str, title: str, link: str, is_markdown: bool = False, situation: str | tuple = None, tips: str = None,
+                              **kwargs):
         """
         通过企业微信机器人推送文章
 
@@ -99,11 +100,10 @@ class WxBusinessPusher:
         :param key:
         :return:
         """
-        situation = WxBusinessPusher.handle_read_situation(situation, is_robot=True)
-        data = {
-            "msgtype": "markdown",
-            "markdown": {
-                "content": f'''
+
+        if is_markdown:
+            situation = WxBusinessPusher.handle_read_situation(situation, is_robot=True)
+            s = f'''
 # {title}
 
 【当前阅读情况】
@@ -115,6 +115,12 @@ class WxBusinessPusher:
 ----> [前往阅读]({link})
 
 ----> {global_utils.get_date()}'''
+        else:
+            s = link
+        data = {
+            "msgtype": "markdown",
+            "markdown": {
+                "content": s
             }
         }
         print(f"> 🚛🚛 文章推送中 ->{link}")

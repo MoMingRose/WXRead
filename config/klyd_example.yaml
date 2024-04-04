@@ -39,6 +39,9 @@
 # 【选填】 是否使用 企业微信机器人推送（可单独配置）
 # 功能描述：当 push_type为 2 时生效，默认为True
 #use_robot: true
+# 【选填】 是否使用 markdown 格式文本推送，默认不使用，仅推送文章链接
+# 功能描述：markdown格式更好看，但是有的微信可能不支持（群友反馈）
+#is_push_markdown: false
 # 【必/选填】 企业微信机器人的webhook地址（可单独配置）
 # 功能描述：当 use_robot为 true 时生效
 #webhook_url: "https://..."

@@ -266,7 +266,9 @@ class WxReadTaskBase(ABC):
             return WxBusinessPusher.push_article_by_robot(
                 self.wx_business_webhook_url,
                 s,
-                link, **kwargs)
+                link,
+                is_markdown=self.wx_business_is_push_markdown,
+                **kwargs)
         else:
             return WxBusinessPusher.push_article_by_agent(
                 self.wx_business_corp_id,
@@ -422,6 +424,13 @@ class WxReadTaskBase(ABC):
             if flag:
                 client.close()
             self.lock.release()
+
+    @property
+    def wx_business_is_push_markdown(self):
+        ret = self.account_config.is_push_markdown
+        if ret is None:
+            ret = self.config_data.is_push_markdown
+        return ret if ret is not None else False
 
     @property
     def wx_business_use_robot(self):

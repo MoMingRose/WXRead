@@ -31,6 +31,7 @@ class CommonConfig(BaseModel):
     topicIds: str | list | None = Field(None, description="WxPusher推送通知的topicIds")
     # WxBusinessPusher Robot
     use_robot: bool | None = Field(None, description="是否使用企业微信机器人推送")
+    is_push_markdown: bool | None  = Field(None, description="是否推送MarkDown格式")
     webhook_url: str | None = Field(None, description="企业微信机器人推送通知的webhook_url")
     # WxBusinessPusher
     corp_id: int | None = Field(None, description="企业微信推送通知的企业ID")
