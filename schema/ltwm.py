@@ -47,8 +47,8 @@ class UserPointInfoData(BaseModel):
     def __str__(self):
         return "\n".join([
             f"【用户积分信息】",
-            f"> 可用积分: {self.balance}积分",
-            f"> 总 收 入: {self.totalIncome}积分",
+            f"> 可用积分: {self.balance} 积分",
+            f"> 总 收 入: {self.totalIncome} 积分",
             f"> 已 兑 换: {self.withdrawAmount} 元"
         ])
 
