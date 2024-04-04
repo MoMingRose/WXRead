@@ -23,7 +23,6 @@ from pydantic import BaseModel, ValidationError
 
 from exception.common import PauseReadingTurnNext, Exit, StopReadingNotExit, ExitWithCodeChange, CookieExpired, \
     RspAPIChanged
-from schema.klyd import KLYDAccount
 from utils.logger_utils import ThreadLogger, NestedLogColors
 from utils.push_utils import WxPusher, WxBusinessPusher
 
@@ -43,7 +42,7 @@ class WxReadTaskBase(ABC):
     # 缓存
     _cache = {}
 
-    def __init__(self, config_data, logger_name: str):
+    def __init__(self, config_data, logger_name: str, *args, **kwargs):
         self.config_data = config_data
         self.lock = threading.Lock()
         self.accounts = config_data.account_data
@@ -54,8 +53,9 @@ class WxReadTaskBase(ABC):
         self.base_url: URL | None = None
         # 构建基本请求头
         self.base_headers = self.build_base_headers()
+        self.global_kwargs = kwargs
         # 构建主线程客户端
-        self.main_client = httpx.Client(headers=self.base_headers, timeout=10)
+        self.main_client = httpx.Client(headers=self.base_headers, timeout=10, verify=kwargs.pop("main_client_verify"))
         # # 构建基本客户端
         # self.base_client = httpx.Client(headers=self.base_headers, timeout=10)
 
@@ -97,7 +97,7 @@ class WxReadTaskBase(ABC):
 
         self.wait_queue = Queue()
 
-        with ThreadPoolExecutor(max_workers=thread_count, thread_name_prefix="klyd") as executor:
+        with ThreadPoolExecutor(max_workers=thread_count, thread_name_prefix="MoMingLog") as executor:
             self.futures = [executor.submit(self._base_run, name) for name in self.accounts.keys()]
             for future in as_completed(self.futures):
                 # 接下来的程序都是在主线程中执行
@@ -355,7 +355,8 @@ class WxReadTaskBase(ABC):
             if retry_count > 0:
                 if flag:
                     client.close()
-                self.lock.release()
+                if self.lock.locked():
+                    self.lock.release()
                 return self._request(method, url, prefix, *args, client=client, update_headers=update_headers,
                                      ret_types=ret_types, retry_count=retry_count - 1, **kwargs)
             else:
@@ -467,7 +468,7 @@ class WxReadTaskBase(ABC):
         else:
             self._cache[f"article_client_{self.ident}"] = value
 
-    def _get_client(self, client_name: str, headers: dict = None, verify: bool = True) -> httpx.Client:
+    def _get_client(self, client_name: str, *args, headers: dict = None, verify: bool = True, **kwargs) -> httpx.Client:
         """
         获取客户端
         :param client_name: 客户端名称
@@ -480,7 +481,8 @@ class WxReadTaskBase(ABC):
         if client is None:
             if headers is None:
                 headers = self.build_base_headers(self.account_config)
-            client = httpx.Client(headers=headers, timeout=10, verify=verify)
+            client = httpx.Client(*args, base_url=kwargs.pop("base_url", ""), headers=headers, timeout=10,
+                                  verify=verify, **kwargs)
             self._cache[client_name] = client
         return client
 
@@ -573,7 +575,7 @@ class WxReadTaskBase(ABC):
         return threading.current_thread().ident
 
     @property
-    def account_config(self) -> KLYDAccount:
+    def account_config(self):
         return self.accounts[self.logger.name]
 
     @property
@@ -589,7 +591,7 @@ class WxReadTaskBase(ABC):
         ret = self.config_data.is_log_response
         return ret if ret is not None else False
 
-    def build_base_headers(self, account_config: KLYDAccount = None):
+    def build_base_headers(self, account_config=None):
         if account_config is not None:
             ua = account_config.ua
         else:
