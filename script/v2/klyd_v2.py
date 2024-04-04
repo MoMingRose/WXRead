@@ -267,12 +267,8 @@ class KLYDV2(WxReadTaskBase):
         turn_count = self.current_read_count // 30 + 1
         self.logger.war(f"🟡 当前是第[{turn_count}]轮阅读")
         read_count = self.current_read_count % 30 + 1
+
         while True:
-            if self.current_read_count != 0:
-                msg = f"🟡 准备阅读第[{turn_count} - {read_count}]篇, 已成功阅读[{self.current_read_count}]篇"
-            else:
-                msg = f"🟡 准备阅读[{turn_count} - {read_count}]篇"
-            self.logger.war(msg)
             # 发起完成阅读请求，从而获取下一次阅读的文章链接
             res_model = self.__request_for_do_read_json(full_api_path, is_pushed=is_pushed)
             # 获取有效的返回个数
@@ -311,6 +307,13 @@ class KLYDV2(WxReadTaskBase):
             # 如果经过上方重试后仍然为None，则抛出异常
             if article_url is None:
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
+            # 打印阅读情况
+            if self.current_read_count != 0:
+                msg = f"🟡 准备阅读第[{turn_count} - {read_count}]篇, 已成功阅读[{self.current_read_count}]篇"
+            else:
+                msg = f"🟡 准备阅读[{turn_count} - {read_count}]篇"
+            self.logger.war(msg)
+
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
             # 判断下一篇阅读计数是否达到指定检测数
