@@ -246,32 +246,6 @@ class RspDoRead(BaseModel):
         return count
 
 
-class ArticleInfo(BaseModel):
-    """文章信息"""
-    article_url: str
-    article_biz: str
-    article_title: str
-    article_author: str
-    article_desc: str
-
-    def __str__(self):
-        msg = []
-        if self.article_biz:
-            msg.append(f"> 文章BIZ: {self.article_biz}")
-        if self.article_url:
-            msg.append(f"> 文章链接: {self.article_url}")
-        if self.article_title:
-            msg.append(f"> 文章标题: {self.article_title}")
-        if self.article_author:
-            msg.append(f"> 文章作者: {self.article_author}")
-        if self.article_desc:
-            msg.append(f"> 文章描述: {self.article_desc}")
-        return "\n".join(msg)
-
-    def __repr__(self):
-        return self.__str__()
-
-
 class RspWithdrawalUser(BaseModel):
     """提款用户信息"""
     uid: str

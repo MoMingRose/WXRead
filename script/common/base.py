@@ -16,13 +16,16 @@ from http.cookies import SimpleCookie
 from json import JSONDecodeError
 from queue import Queue
 from typing import Type
+from urllib.parse import ParseResult
 
 import httpx
 from httpx import URL
 from pydantic import BaseModel, ValidationError
 
-from exception.common import PauseReadingTurnNext, Exit, StopReadingNotExit, ExitWithCodeChange, CookieExpired, \
-    RspAPIChanged
+from exception.common import PauseReadingTurnNextAndCheckWait, Exit, StopReadingNotExit, ExitWithCodeChange, \
+    CookieExpired, \
+    RspAPIChanged, PauseReadingTurnNext
+from schema.common import ArticleInfo
 from utils.logger_utils import ThreadLogger, NestedLogColors
 from utils.push_utils import WxPusher, WxBusinessPusher
 
@@ -41,6 +44,15 @@ class WxReadTaskBase(ABC):
     CURRENT_TASK_NAME = "微信阅读任务"
     # 缓存
     _cache = {}
+
+    # 文章标题
+    ARTICLE_TITLE_COMPILE = re.compile(r'meta.*?og:title"\scontent="(.*?)"\s*/>', re.S)
+    # 文章作者
+    ARTICLE_AUTHOR_COMPILE = re.compile(r'meta.*?og:article:author"\scontent="(.*?)"\s*/>', re.S)
+    # 文章描述
+    ARTICLE_DESC_COMPILE = re.compile(r'meta.*?og:description"\scontent="(.*?)"\s*/>', re.S)
+    # 文章Biz
+    ARTICLE_BIZ_COMPILE = re.compile(r"og:url.*?__biz=(.*?)&", re.S)
 
     def __init__(self, config_data, logger_name: str, *args, **kwargs):
         self.config_data = config_data
@@ -136,6 +148,9 @@ class WxReadTaskBase(ABC):
             self.logger.war(e)
             return
         except PauseReadingTurnNext as e:
+            self.logger.info(f"🟢🔶 {e}")
+            return
+        except PauseReadingTurnNextAndCheckWait as e:
             self.lock.acquire()
             self.logger.info(f"🟢🔶 {e}")
             if self.is_wait_next_read:
@@ -185,6 +200,37 @@ class WxReadTaskBase(ABC):
         self.logger.info(f"🟢 程序已睡眠结束")
         self.run(name)
 
+    def parse_wx_article(self, article_url):
+        try:
+            # 获取文章源代码
+            article_page = self.__request_article_page(article_url)
+        except:
+            article_page = ""
+
+        if r := self.ARTICLE_BIZ_COMPILE.search(article_page):
+            article_biz = r.group(1)
+        else:
+            article_biz = ""
+        if r := self.ARTICLE_TITLE_COMPILE.search(article_page):
+            article_title = r.group(1)
+        else:
+            article_title = ""
+        if r := self.ARTICLE_AUTHOR_COMPILE.search(article_page):
+            article_author = r.group(1)
+        else:
+            article_author = ""
+        if r := self.ARTICLE_DESC_COMPILE.search(article_page):
+            article_desc = r.group(1)
+        else:
+            article_desc = ""
+        article_info = ArticleInfo(
+            article_url=article_url,
+            article_biz=article_biz,
+            article_title=article_title,
+            article_author=article_author,
+            article_desc=article_desc
+        )
+
     def wx_pusher(self, link, detecting_count: int = None) -> bool:
         """
         通过WxPusher推送
@@ -230,6 +276,9 @@ class WxReadTaskBase(ABC):
                 link=link,
                 **kwargs
             )
+
+    def __request_article_page(self, article_url: str):
+        return self.request_for_page(article_url, "请求文章信息 article_client", client=self.article_client)
 
     def request_for_json(self, method: str, url: str | URL, prefix: str, *args, client: httpx.Client = None,
                          model: Type[BaseModel] = None,
@@ -444,6 +493,25 @@ class WxReadTaskBase(ABC):
         else:
             self._cache[f"base_client_{self.ident}"] = value
 
+    def parse_base_url(self, url: str | URL | ParseResult, client: httpx.Client):
+        """
+        提取出用于设置 base_url的数据，并完成配置
+        :param url:
+        :param client:
+        :return:
+        """
+        if isinstance(url, str):
+            url = URL(url)
+
+        protocol = url.scheme
+
+        if isinstance(url, URL):
+            host = url.host
+        else:
+            host = url.hostname
+        client.base_url = f"{protocol}://{host}"
+        return protocol, host
+
     @property
     def read_client(self):
         return self._get_client("read")
@@ -486,6 +554,12 @@ class WxReadTaskBase(ABC):
             self._cache[client_name] = client
         return client
 
+    def sleep_fun(self, is_pushed: bool):
+        t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
+        self.logger.info(f"等待检测完成, 💤 睡眠{t}秒" if is_pushed else f"💤 随机睡眠{t}秒")
+        # 睡眠随机时间
+        time.sleep(t)
+
     @property
     def wx_pusher_token(self):
         ret = self.account_config.appToken
@@ -508,18 +582,15 @@ class WxReadTaskBase(ABC):
     @property
     def read_delay(self):
         ret = [10, 20]
-
         delay = self.account_config.delay
         if delay is None:
             delay = self.config_data.delay
-
-        _push_delay = delay.push_delay
-        _len = len(_push_delay)
-
-        if _push_delay is not None:
+        _read_delay = delay.read_delay
+        if _read_delay is not None:
+            _len = len(_read_delay)
             if _len == 2:
-                _min = min(_push_delay)
-                _max = max(_push_delay)
+                _min = min(_read_delay)
+                _max = max(_read_delay)
                 ret = [_min, _max]
             else:
                 _max = max(ret)
@@ -534,12 +605,12 @@ class WxReadTaskBase(ABC):
         if delay is None:
             delay = self.config_data.delay
 
-        _read_delay = delay.read_delay
-        _len = len(_read_delay)
+        _push_delay = delay.push_delay
 
-        if _read_delay is not None:
+        if _push_delay is not None:
+            _len = len(_push_delay)
             if _len != 1:
-                _max = max(_read_delay)
+                _max = max(_push_delay)
                 ret = [_max] if _max > 19 else [19]
         return ret
 

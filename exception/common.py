@@ -7,6 +7,11 @@
 """
 
 
+class PauseReadingTurnNextAndCheckWait(Exception):
+    def __init__(self, msg: str):
+        super().__init__(f"暂停阅读, {msg}")
+
+
 class PauseReadingTurnNext(Exception):
     def __init__(self, msg: str):
         super().__init__(f"暂停阅读, {msg}")
@@ -40,6 +45,7 @@ class Exit(Exception):
 class FailedPushTooManyTimes(Exception):
     def __init__(self):
         super().__init__("🔴 超过最大推送失败次数，请配置好相关数据!")
+
 
 class NoSuchArticle(Exception):
     def __init__(self, msg):

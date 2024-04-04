@@ -7,6 +7,7 @@
 """
 import hashlib
 import time
+from datetime import datetime
 
 
 def timestamp(length=10):
@@ -28,3 +29,13 @@ def get_date(is_fill_chinese=False):
     if is_fill_chinese:
         return time.strftime("%Y年%m月%d日 %H时%M分%S秒", time.localtime())
     return time.strftime("%Y-%m-%d", time.localtime())
+
+
+def is_date_after_today(date_str):
+    """判断传进来的时间是否比今天要靠后"""
+    try:
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        today = datetime.today().date()
+        return parsed_date > today
+    except ValueError:
+        return False

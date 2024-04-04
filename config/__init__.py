@@ -13,6 +13,7 @@ import yaml
 from pydantic import BaseModel
 
 from schema.klyd import KLYDConfig
+from schema.ltwm import LTWMConfig
 from schema.mmkk import MMKKConfig
 from utils import md5
 
@@ -80,6 +81,14 @@ def load_klyd_config() -> KLYDConfig:
             for i in data.biz_data:
                 fp.write(f"  - \"{i}\"\n")
     return data
+
+
+def load_ltwm_config() -> LTWMConfig:
+    """
+    加载力天微盟阅读的配置
+    :return:
+    """
+    return __load_config("力天微盟", "ltwm", LTWMConfig)
 
 
 cache_dir = os.path.join(root_dir, "cache")

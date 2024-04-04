@@ -14,11 +14,11 @@ import time
 from httpx import URL
 
 from config import load_klyd_config
-from exception.common import PauseReadingTurnNext, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange, \
+from exception.common import PauseReadingTurnNextAndCheckWait, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange, \
     FailedPushTooManyTimes, NoSuchArticle
 from exception.klyd import FailedPassDetect, \
     RegExpError, WithdrawFailed
-from schema.klyd import KLYDConfig, RspRecommend, RspReadUrl, RspDoRead, ArticleInfo, RspWithdrawal, RspWithdrawalUser
+from schema.klyd import KLYDConfig, RspRecommend, RspReadUrl, RspDoRead, RspWithdrawal, RspWithdrawalUser
 from script.common.base import WxReadTaskBase, RetTypes
 from utils import EntryUrl, md5
 from utils.logger_utils import NestedLogColors
@@ -60,14 +60,7 @@ class KLYDV2(WxReadTaskBase):
     # 检测有效阅读链接
     ARTICLE_LINK_VALID_COMPILE = re.compile(
         r"^https?://mp.weixin.qq.com/s\?__biz=[^&]*&mid=[^&]*&idx=\d*&(?!.*?chksm).*?&scene=\d*#wechat_redirect$")
-    # 文章标题
-    ARTICLE_TITLE_COMPILE = re.compile(r'meta.*?og:title"\scontent="(.*?)"\s*/>', re.S)
-    # 文章作者
-    ARTICLE_AUTHOR_COMPILE = re.compile(r'meta.*?og:article:author"\scontent="(.*?)"\s*/>', re.S)
-    # 文章描述
-    ARTICLE_DESC_COMPILE = re.compile(r'meta.*?og:description"\scontent="(.*?)"\s*/>', re.S)
-    # 文章Biz
-    ARTICLE_BIZ_COMPILE = re.compile(r"og:url.*?__biz=(.*?)&", re.S)
+
     # 普通链接Biz提取
     NORMAL_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&", re.S)
 
@@ -270,7 +263,7 @@ class KLYDV2(WxReadTaskBase):
 
         while True:
             # 发起完成阅读请求，从而获取下一次阅读的文章链接
-            res_model = self.__request_for_do_read_json(full_api_path, is_pushed=is_pushed)
+            res_model = self.__request_for_do_read_json(full_api_path)
             # 获取有效的返回个数
             ret_count = res_model.ret_count
             if ret_count == 3 and res_model.jkey is None:
@@ -301,7 +294,7 @@ class KLYDV2(WxReadTaskBase):
                         jkey=res_model.jkey
                     )
                     # 睡眠
-                    self.__alone_sleep_fun(False)
+                    self.sleep_fun(False)
                     continue
 
             # 如果经过上方重试后仍然为None，则抛出异常
@@ -387,57 +380,11 @@ class KLYDV2(WxReadTaskBase):
                 jkey=res_model.jkey
             )
             # 后打印
-            self.__print_article_info(res_model.url)
+            self.logger.info(f"【第 {self.current_read_count + 1} 篇文章信息】\n{self.parse_wx_article(article_url)}")
 
-            self.__alone_sleep_fun(is_pushed)
+            self.sleep_fun(is_pushed)
 
-    def __alone_sleep_fun(self, is_pushed: bool):
-        t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
-        self.logger.info(f"等待检测完成, 💤 睡眠{t}秒" if is_pushed else f"💤 随机睡眠{t}秒")
-        # 睡眠随机时间
-        time.sleep(t)
-
-    def __print_article_info(self, article_url):
-        """
-        解析文章信息
-        :param article_url: 文章链接
-        :return:
-        """
-        try:
-            # 获取文章源代码
-            article_page = self.__request_article_page(article_url)
-        except:
-            article_page = ""
-
-        if r := self.ARTICLE_BIZ_COMPILE.search(article_page):
-            article_biz = r.group(1)
-        else:
-            article_biz = ""
-        if r := self.ARTICLE_TITLE_COMPILE.search(article_page):
-            article_title = r.group(1)
-        else:
-            article_title = ""
-        if r := self.ARTICLE_AUTHOR_COMPILE.search(article_page):
-            article_author = r.group(1)
-        else:
-            article_author = ""
-        if r := self.ARTICLE_DESC_COMPILE.search(article_page):
-            article_desc = r.group(1)
-        else:
-            article_desc = ""
-        article_info = ArticleInfo(
-            article_url=article_url,
-            article_biz=article_biz,
-            article_title=article_title,
-            article_author=article_author,
-            article_desc=article_desc
-        )
-        self.logger.info(f"【第 {self.current_read_count + 1} 篇文章信息】\n{article_info}")
-
-    def __request_article_page(self, article_url: str):
-        return self.request_for_page(article_url, "请求文章信息 article_client", client=self.article_client)
-
-    def __request_for_do_read_json(self, do_read_full_path: str, is_pushed: bool = False) -> RspDoRead | dict:
+    def __request_for_do_read_json(self, do_read_full_path: str) -> RspDoRead | dict:
         ret = self.request_for_json(
             "GET",
             do_read_full_path,
@@ -540,7 +487,7 @@ class KLYDV2(WxReadTaskBase):
         if msg:
             # 如果返回的信息，有以下内容，则提前进行异常抛出，避免出现其他冗余的请求
             if "下一批" in msg:
-                raise PauseReadingTurnNext(msg)
+                raise PauseReadingTurnNextAndCheckWait(msg)
             elif "阅读限制" in msg or "任务上限" in msg or "微信限制" in msg:
                 raise StopReadingNotExit(msg)
 

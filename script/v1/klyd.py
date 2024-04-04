@@ -22,10 +22,11 @@ from httpx import URL
 from pydantic import BaseModel, ValidationError
 
 from config import load_klyd_config
-from exception.common import PauseReadingTurnNext, CookieExpired, RspAPIChanged, ExitWithCodeChange, Exit
+from exception.common import PauseReadingTurnNextAndCheckWait, CookieExpired, RspAPIChanged, ExitWithCodeChange, Exit
 from exception.klyd import RegExpError, FailedPassDetect
-from schema.klyd import KLYDConfig, KLYDAccount, RspRecommend, RspReadUrl, RspDoRead, ArticleInfo, RspWithdrawal, \
+from schema.klyd import KLYDConfig, KLYDAccount, RspRecommend, RspReadUrl, RspDoRead, RspWithdrawal, \
     RspWithdrawalUser
+from schema.common import ArticleInfo
 from utils import EntryUrl, md5
 from utils.logger_utils import ThreadLogger
 from utils.push_utils import WxPusher
@@ -194,7 +195,7 @@ class KLYD:
             # 尝试进行提现操作
             self.__request_withdraw()
             is_withdraw = True
-        except PauseReadingTurnNext as e:
+        except PauseReadingTurnNextAndCheckWait as e:
             logger.info(f"🟢🔶 {e}")
             if self.is_wait_next_read:
                 logger.info("✳️ 检测到开启了【等待下次阅读】的功能")
@@ -548,7 +549,7 @@ class KLYD:
             logger.info(infoView)
             if msg := infoView.msg:
                 if "下一批" in msg or "微信限制" in msg:
-                    raise PauseReadingTurnNext(msg)
+                    raise PauseReadingTurnNextAndCheckWait(msg)
 
     def __request_for_read_url(self) -> URL:
         """
