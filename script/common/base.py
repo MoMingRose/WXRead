@@ -168,7 +168,9 @@ class WxReadTaskBase(ABC):
             self.is_need_withdraw = False
             self.logger.exception(e)
             sys.exit(0)
-        # finally:
+        finally:
+            if self.lock.locked():
+                self.lock.release()
         #     self.base_client = None
         #     self.read_client = None
         #     self.article_client = None
@@ -424,7 +426,8 @@ class WxReadTaskBase(ABC):
         finally:
             if flag:
                 client.close()
-            self.lock.release()
+            if self.lock.locked():
+                self.lock.release()
 
     @property
     def wx_business_is_push_markdown(self):
@@ -558,7 +561,10 @@ class WxReadTaskBase(ABC):
         client = self._cache.get(client_name)
         if client is None:
             if headers is None:
-                headers = self.build_base_headers(self.account_config)
+                try:
+                    headers = self.build_base_headers(self.account_config)
+                except KeyError:
+                    headers = self.build_base_headers()
             client = httpx.Client(*args, base_url=kwargs.pop("base_url", ""), headers=headers, timeout=10,
                                   verify=verify, **kwargs)
             self._cache[client_name] = client

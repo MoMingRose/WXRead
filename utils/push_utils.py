@@ -103,6 +103,7 @@ class WxBusinessPusher:
 
         if is_markdown:
             situation = WxBusinessPusher.handle_read_situation(situation, is_robot=True)
+            msg_type = "markdown"
             s = f'''
 # {title}
 
@@ -117,9 +118,10 @@ class WxBusinessPusher:
 ----> {global_utils.get_date()}'''
         else:
             s = link
+            msg_type = "text"
         data = {
-            "msgtype": "markdown",
-            "markdown": {
+            "msgtype": msg_type,
+            msg_type: {
                 "content": s
             }
         }
@@ -244,3 +246,4 @@ class WxBusinessPusher:
             }
         })
         return access_token
+
