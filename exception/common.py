@@ -38,8 +38,9 @@ class ExitWithCodeChange(Exception):
 
 
 class Exit(Exception):
-    def __init__(self):
-        super().__init__("🔴 出现不可挽回异常，退出脚本")
+    def __init__(self, msg=None):
+        s = f", 原因： {msg}" if msg is not None else ""
+        super().__init__(f"🔴 出现不可挽回异常{s}, 退出脚本")
 
 
 class FailedPushTooManyTimes(Exception):

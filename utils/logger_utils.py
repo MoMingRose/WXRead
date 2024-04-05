@@ -10,7 +10,7 @@ import os
 import threading
 
 from colorama import Fore, Style, init
-from httpx import Response
+from httpx import Response, URL
 from pydantic import BaseModel
 
 from utils import get_date
@@ -143,6 +143,8 @@ class Logger:
         if isinstance(msg, BaseModel):
             msg = msg.__str__()
         elif isinstance(msg, Exception):
+            msg = str(msg)
+        elif isinstance(msg, URL):
             msg = str(msg)
 
         level_name = logging.getLevelName(level)

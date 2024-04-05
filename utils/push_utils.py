@@ -103,6 +103,7 @@ class WxBusinessPusher:
 
         if is_markdown:
             situation = WxBusinessPusher.handle_read_situation(situation, is_robot=True)
+            msg_type = "markdown"
             s = f'''
 # {title}
 
@@ -117,9 +118,10 @@ class WxBusinessPusher:
 ----> {global_utils.get_date()}'''
         else:
             s = link
+            msg_type = "text"
         data = {
-            "msgtype": "markdown",
-            "markdown": {
+            "msgtype": msg_type,
+            msg_type: {
                 "content": s
             }
         }
@@ -244,3 +246,11 @@ class WxBusinessPusher:
             }
         })
         return access_token
+
+
+if __name__ == '__main__':
+    WxBusinessPusher.push_article_by_robot(
+        "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=5bb8f9ca-573b-475b-b0c0-f597936eec97",
+        "测试推送",
+        "http://www.baidu.com"
+    )
