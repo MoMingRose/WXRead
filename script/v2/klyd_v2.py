@@ -310,7 +310,7 @@ class KLYDV2(WxReadTaskBase):
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
             # 判断下一篇阅读计数是否达到指定检测数
-            if read_count in self.custom_detected_count:
+            if self.current_read_count + 1 in self.custom_detected_count:
                 self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                 is_need_push = True
             # 判断是否是检测文章
@@ -324,7 +324,7 @@ class KLYDV2(WxReadTaskBase):
             # 判断此次请求后返回的键值对数量是多少
             elif ret_count == 2:
                 # 判断下一篇阅读计数是否达到指定检测数
-                if read_count in self.custom_detected_count:
+                if self.current_read_count + 1 in self.custom_detected_count:
                     self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                     is_need_push = True
             elif ret_count == 4:
