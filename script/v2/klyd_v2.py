@@ -14,7 +14,8 @@ import time
 from httpx import URL
 
 from config import load_klyd_config
-from exception.common import PauseReadingTurnNextAndCheckWait, StopReadingNotExit, CookieExpired, RspAPIChanged, ExitWithCodeChange, \
+from exception.common import PauseReadingTurnNextAndCheckWait, StopReadingNotExit, CookieExpired, RspAPIChanged, \
+    ExitWithCodeChange, \
     FailedPushTooManyTimes, NoSuchArticle
 from exception.klyd import FailedPassDetect, \
     RegExpError, WithdrawFailed
@@ -300,12 +301,15 @@ class KLYDV2(WxReadTaskBase):
             # 如果经过上方重试后仍然为None，则抛出异常
             if article_url is None:
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
+
             # 打印阅读情况
             if self.current_read_count != 0:
                 msg = f"🟡 准备阅读第[{turn_count} - {read_count}]篇, 已成功阅读[{self.current_read_count}]篇"
             else:
                 msg = f"🟡 准备阅读[{turn_count} - {read_count}]篇"
             self.logger.war(msg)
+
+            self.logger.info(f"【第 [{turn_count} - {read_count}] 篇文章信息】\n{self.parse_wx_article(article_url)}")
 
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
@@ -381,8 +385,6 @@ class KLYDV2(WxReadTaskBase):
                 part_api_path,
                 jkey=res_model.jkey
             )
-            # 后打印
-            self.logger.info(f"【第 {self.current_read_count + 1} 篇文章信息】\n{self.parse_wx_article(article_url)}")
 
             self.sleep_fun(is_pushed)
 
