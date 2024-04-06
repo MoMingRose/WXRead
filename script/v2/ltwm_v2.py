@@ -134,6 +134,8 @@ class LTWMV2(WxReadTaskBase):
         reader_domain = self.__request_reader_domain()
         if url := reader_domain.data:
             self.logger.info(f"🟢 阅读链接获取成功: {url}")
+            # 判断url中是否有换行符，如存在，则置空
+            url = url.replace("\n", "")
             url = URL(url)
             self.base_client.headers.update({
                 "Origin": f"{url.scheme}://{url.host}",
