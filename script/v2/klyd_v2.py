@@ -16,9 +16,9 @@ from httpx import URL
 from config import load_klyd_config
 from exception.common import PauseReadingTurnNextAndCheckWait, StopReadingNotExit, CookieExpired, RspAPIChanged, \
     ExitWithCodeChange, \
-    FailedPushTooManyTimes, NoSuchArticle
+    FailedPushTooManyTimes, NoSuchArticle, RegExpError
 from exception.klyd import FailedPassDetect, \
-    RegExpError, WithdrawFailed
+    WithdrawFailed
 from schema.klyd import KLYDConfig, RspRecommend, RspReadUrl, RspDoRead, RspWithdrawal, RspWithdrawalUser
 from script.common.base import WxReadTaskBase, RetTypes
 from utils import EntryUrl, md5
@@ -100,7 +100,7 @@ class KLYDV2(WxReadTaskBase):
         if 'f9839ced92845cbf6166b0cf577035d3' != md5(homepage_html):
             raise ExitWithCodeChange("homepage_html")
 
-        self.is_need_withdraw = False
+        self.is_need_withdraw = True
         try:
             # 获取推荐数据（里面包含当前阅读的信息）
             recommend_data = self.__request_recommend_json(homepage_url)
@@ -166,7 +166,7 @@ class KLYDV2(WxReadTaskBase):
             u_ali_real_name = user_info.get("u_ali_real_name")
 
         if amount < 30 or amount // 100 < self.withdraw:
-            raise WithdrawFailed("🔴 提现失败, 当前账户余额达不到提现要求!")
+            raise WithdrawFailed("当前账户余额达不到提现要求!")
 
         if self.withdraw_type == "wx":
             self.logger.info("开始进行微信提现操作...")
@@ -327,13 +327,21 @@ class KLYDV2(WxReadTaskBase):
                 is_need_push = True
             # 判断此次请求后返回的键值对数量是多少
             elif ret_count == 2:
+                self.logger.war(f"🟡 当前已进入检测文章盲区，无法判断是否会返回检测文章")
                 # 判断下一篇阅读计数是否达到指定检测数
                 if self.current_read_count + 1 in self.custom_detected_count:
                     self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                     is_need_push = True
+                else:
+                    if self.unknown_to_push:
+                        self.logger.war(f"🟡 “未知走推送”已开启，当前文章走推送通道!")
+                        is_need_push = True
+                    else:
+                        self.logger.war(
+                            f"🟡 “未知走推送”未开启, 阅读成功与否听天由命, 响应数据如下: \n{res_model.dict()}")
             elif ret_count == 4:
                 # 表示正处于检测中
-                self.logger.info(f"🟡 此次检测结果为：{res_model.success_msg}")
+                self.logger.war(f"🟡 此次检测结果为：{res_model.success_msg}")
                 if self.just_in_case:
                     self.logger.war(f"🟡 “以防万一”已开启，下一篇仍然推送")
                     is_need_push = True
@@ -356,6 +364,8 @@ class KLYDV2(WxReadTaskBase):
 
             # 先推送
             if is_need_push:
+                # 走推送的时候
+                # 下方阅读数量自动 + 1
                 read_count += 1
                 self.current_read_count += 1
                 push_types = self.push_types
@@ -373,8 +383,9 @@ class KLYDV2(WxReadTaskBase):
 
                 # 只要其中任意一个推送成功，则赋值为True
                 is_pushed = any(push_result)
-
+                # 如果推送失败
                 if not is_pushed:
+                    # 直接抛出异常
                     raise FailedPushTooManyTimes()
                 is_need_push = False
             else:
@@ -544,25 +555,24 @@ class KLYDV2(WxReadTaskBase):
         return self.request_for_redirect(self.entry_url, "请求入口链接， main_client", client=self.main_client)
 
     @property
-    def custom_detected_count(self):
-        ret = self.config_data.custom_detected_count
+    def unknown_to_push(self):
+        ret = self.account_config.unknown_to_push
         if ret is None:
-            ret = self.account_config.custom_detected_count
+            ret = self.config_data.unknown_to_push
+        return ret if ret is not None else False
+
+    @property
+    def custom_detected_count(self):
+        ret = self.account_config.custom_detected_count
+        if ret is None:
+            ret = self.config_data.custom_detected_count
         return ret if ret is not None else []
 
     @property
-    def current_read_count(self):
-        return self._cache.get(f"current_read_count_{self.ident}")
-
-    @current_read_count.setter
-    def current_read_count(self, value):
-        self._cache[f"current_read_count_{self.ident}"] = value
-
-    @property
     def just_in_case(self):
-        ret = self.config_data.just_in_case
+        ret = self.account_config.just_in_case
         if ret is None:
-            ret = self.account_config.just_in_case
+            ret = self.config_data.just_in_case
         return ret if ret is not None else True
 
     @property

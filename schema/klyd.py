@@ -26,6 +26,7 @@ class CommonKLYDConfig(BaseModel):
     """可乐阅读全局和局部的相同配置"""
     withdraw_type: str = Field(None, description="提现类型: wx 微信, ali 支付宝")
     just_in_case: bool | None = Field(None, description="以防万一开关")
+    unknown_to_push: bool | None = Field(None, description="未知走推送开关")
 
 class KLYDAccount(CommonPartConfig, CommonKLYDConfig):
     """账号配置（局部配置）"""
@@ -191,12 +192,12 @@ class RspDoRead(BaseModel):
 
         经过粗略的观察，一般来说：
         返回2个，可能出现以下情况:
-            - 需要检测
+            - 此数据返回的结果检测状态未知，目前只能通过匹配特征biz的方式来筛选
                 {
                   "jkey": "MDAwMDAwMDAwM......",
                   "url": "https://mp.weixin.qq.com/s?__biz=Mzg2OTYyNDY1OQ==&mid=2247649861&idx=1&sn=f0216ebeec1edb6c30ba1ab54a6fec7d&scene=0#wechat_redirect"
                 }
-            - 未知状态
+            - 未知状态，现猜测是当前无文章可分配
                 {
                   "jkey": "MDAwMDAwMDAwMH6et2yHiryRsqu64L67gKOXfIvLlWra145qlc2LjI2BlKDGmIZmypO5qtTXu6iMaoh6nbSIfdLNmGvMmA",
                   "url": null
@@ -223,7 +224,7 @@ class RspDoRead(BaseModel):
                   "jkey": "MDAwMDAw........",
                   "url": "https://mp.weixin.qq.com/s?__biz=Mzg3Nzg4OTA4Ng==&mid=2247526971&idx=1&sn=2edf88cefcf3e30f988fab3f1f4f86de&scene=0#wechat_redirect"
                 }
-        返回4个，应该表示正处于检测中，可以通过其中的 success_msg 获取阅读情况，目前一致的阅读情况有：阅读成功
+        返回4个，应该表示正处于检测中，可以通过其中的 success_msg 获取阅读情况，目前已知的阅读情况有：阅读成功
             {
               "check_finish": 1,
               "success_msg": "阅读成功",

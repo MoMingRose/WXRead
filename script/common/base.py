@@ -25,6 +25,7 @@ from pydantic import BaseModel, ValidationError
 from exception.common import PauseReadingTurnNextAndCheckWait, Exit, StopReadingNotExit, ExitWithCodeChange, \
     CookieExpired, \
     RspAPIChanged, PauseReadingTurnNext
+from exception.klyd import WithdrawFailed
 from schema.common import ArticleInfo
 from utils.logger_utils import ThreadLogger, NestedLogColors
 from utils.push_utils import WxPusher, WxBusinessPusher
@@ -138,21 +139,18 @@ class WxReadTaskBase(ABC):
         self.thread2name[self.ident] = name
         try:
             self.run(name)
-        except StopReadingNotExit as e:
-            self.logger.war(f"🟡 {e}")
+        except (StopReadingNotExit, WithdrawFailed, CookieExpired) as e:
+            self.logger.war(e)
             return
         except (RspAPIChanged, ExitWithCodeChange) as e:
             self.logger.error(e)
             sys.exit(0)
-        except CookieExpired as e:
-            self.logger.war(e)
-            return
         except PauseReadingTurnNext as e:
-            self.logger.info(f"🟢🔶 {e}")
+            self.logger.info(e)
             return
         except PauseReadingTurnNextAndCheckWait as e:
             self.lock.acquire()
-            self.logger.info(f"🟢🔶 {e}")
+            self.logger.info(e)
             if self.is_wait_next_read:
                 self.logger.info("✳️ 检测到开启了【等待下次阅读】的功能")
                 # 提取数字
@@ -495,6 +493,14 @@ class WxReadTaskBase(ABC):
         self._cache[f"is_need_withdraw_{self.ident}"] = value
 
     @property
+    def current_read_count(self):
+        return self._cache.get(f"current_read_count_{self.ident}")
+
+    @current_read_count.setter
+    def current_read_count(self, value):
+        self._cache[f"current_read_count_{self.ident}"] = value
+
+    @property
     def base_client(self):
         return self._get_client("base")
 
@@ -570,7 +576,7 @@ class WxReadTaskBase(ABC):
             self._cache[client_name] = client
         return client
 
-    def sleep_fun(self, is_pushed: bool):
+    def sleep_fun(self, is_pushed: bool = False):
         t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
         self.logger.info(f"等待检测完成, 💤 睡眠{t}秒" if is_pushed else f"💤 随机睡眠{t}秒")
         # 睡眠随机时间

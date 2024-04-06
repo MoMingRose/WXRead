@@ -11,9 +11,9 @@ import time
 from httpx import URL
 
 from config import load_ltwm_config
-from exception.common import StopReadingNotExit, PauseReadingTurnNext
+from exception.common import StopReadingNotExit, PauseReadingTurnNext, CookieExpired
 from schema.ltwm import LTWMConfig, UserPointInfo, LTWMAccount, TaskList, ReaderDomain, GetTokenByWxKey, ArticleUrl, \
-    CompleteRead, Sign
+    CompleteRead, Sign, BalanceWithdraw
 from script.common.base import WxReadTaskBase
 
 
@@ -40,6 +40,10 @@ class APIS:
 
     # 签到任务API
     SIGN = f"{COMMON}/act/sign/v1/sign"
+    # API: 申请提现
+    WITHDRAW = f"{COMMON}/withdraw/v1/requestBalanceWithdraw"
+    # API: 提现记录
+    WITHDRAW_DETAIL = f"{COMMON}/detail/v1/pageAccountWithdraw"
 
 
 class LTWMV2(WxReadTaskBase):
@@ -75,6 +79,13 @@ class LTWMV2(WxReadTaskBase):
         })
         # 获取用户积分信息，并输出
         user_account = self.__request_user_account()
+
+        if user_account.data is None:
+            if "重新登录" in user_account.message:
+                raise CookieExpired()
+            else:
+                raise StopReadingNotExit(user_account.message)
+
         if user_account.code == 500:
             raise StopReadingNotExit(user_account.message)
         else:
@@ -83,25 +94,42 @@ class LTWMV2(WxReadTaskBase):
         # 获取用户任务列表
         task_list = self.__request_taskList()
 
+        is_wait = False
+
         # 检查当前任务还有哪些未完成
         for data in task_list.data:
             if "文章阅读" in data.name:
-                if data.taskRemainTime != 0:
+                if data.taskRemainTime != 0 and data.status == 2:
                     self.logger.info(f"🟢 当前阅读任务已完成，{data.taskRemainTime}分钟后可继续阅读")
+                elif data.taskRemainTime == 0 and data.status == 4:
+                    self.logger.info(f"🟢 今日阅读任务已完成!")
                 else:
-                    self.logger.war(f"检测到阅读任务待完成，3秒后开始执行...")
+                    self.logger.war(f"🟡 检测到阅读任务待完成，3秒后开始执行...")
                     time.sleep(3)
                     try:
                         self.__do_read_task()
                     except Exception as e:
+                        if "本轮阅读成功完成，奖励发放中" in str(e):
+                            is_wait = True
                         self.logger.war(f"🟡 {e}")
             if "每日签到" in data.name:
-                if data.status != 2:
-                    self.logger.war(f"检测到签到任务待完成，3秒后开始执行...")
-                    time.sleep(3)
-                    self.__do_sign_task()
-                else:
-                    self.logger.info(f"🟢 今天签到任务已完成，如判断错误，请通知作者修复!")
+                self.__do_sign_task()
+        if is_wait:
+            self.logger.info("5秒后开始提现, 请稍后")
+            time.sleep(5)
+        # 发起查询请求，查看当前用户积分
+        user_model = self.__request_user_account()
+        if user_model.data.balance > 1000:
+            self.logger.war("🟡 满足提现要求，准备提现...")
+            withdraw_model = self.__request_withdraw()
+            if "成功" in withdraw_model.message:
+                self.logger.info(f"🟢 提现成功! \n {withdraw_model}")
+                # 顺便请求下提现详情
+                self.__request_withdraw_detail()
+            else:
+                self.logger.error(f"🔴 提现失败, {withdraw_model.message}")
+        else:
+            self.logger.war(f"🟡 当前积分{user_model.data.balance}不满足最低提现要求, 脚本结束!")
 
     def __do_sign_task(self):
         sign_model = self.__request_sign()
@@ -178,6 +206,25 @@ class LTWMV2(WxReadTaskBase):
                     raise PauseReadingTurnNext(complete_model.message)
                 else:
                     raise StopReadingNotExit(f"阅读任务上报失败, {complete_model.message}")
+
+    def __request_withdraw_detail(self):
+        return self.request_for_json(
+            "POST",
+            APIS.WITHDRAW_DETAIL,
+            "提现详情数据",
+            client=self.base_client,
+            data={}
+        )
+
+    def __request_withdraw(self) -> BalanceWithdraw | dict:
+        return self.request_for_json(
+            "POST",
+            APIS.WITHDRAW,
+            "提现",
+            client=self.base_client,
+            model=BalanceWithdraw,
+            json={}
+        )
 
     def __request_sign(self) -> Sign | dict:
         """发起签到请求"""

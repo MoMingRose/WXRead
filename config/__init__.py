@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from schema.klyd import KLYDConfig
 from schema.ltwm import LTWMConfig
 from schema.mmkk import MMKKConfig
+from schema.yryd import YRYDConfig
 from utils import md5
 
 root_dir = os.path.dirname(__file__)
@@ -28,6 +29,17 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
     """
     common_path = os.path.join(root_dir, "common.yaml")
     path = os.path.join(root_dir, f"{filename}.yaml")
+
+    biz_file_path = os.path.join(root_dir, "biz_data.yaml")
+
+    biz_data = None
+
+    if os.path.exists(biz_file_path):
+        with open(biz_file_path, "r", encoding="utf-8") as fp:
+            try:
+                biz_data = yaml.safe_load(fp)
+            except  (IOError, yaml.YAMLError):
+                pass
 
     example_file_path = os.path.join(root_dir, f"{filename}_example.yaml")
 
@@ -55,6 +67,11 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
     else:
         config_data = data if config_data is None else config_data
         config_data.update(data)
+        if (old_biz_data := config_data.get("biz_data")) and biz_data is not None:
+            old_biz_data.extend(biz_data)
+            config_data['biz_data'] = list(set(old_biz_data))
+        else:
+            config_data['biz_data'] = biz_data
 
     return model(**config_data, source=path, **kwargs)
 
@@ -83,6 +100,14 @@ def load_klyd_config() -> KLYDConfig:
     return data
 
 
+def load_yryd_config() -> YRYDConfig:
+    """
+    加载鱼儿阅读的配置
+    :return:
+    """
+    return __load_config("鱼儿阅读", "yryd", YRYDConfig)
+
+
 def load_ltwm_config() -> LTWMConfig:
     """
     加载力天微盟阅读的配置
@@ -92,6 +117,9 @@ def load_ltwm_config() -> LTWMConfig:
 
 
 cache_dir = os.path.join(root_dir, "cache")
+
+if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
 
 cache_file_path = os.path.join(root_dir, "cache", "cache.yaml")
 
@@ -148,4 +176,4 @@ def load_wx_business_access_token(corp_id: int, agent_id: int, file_path: str = 
 
 
 if __name__ == '__main__':
-    print(load_klyd_config())
+    print(load_yryd_config())

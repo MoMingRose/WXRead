@@ -100,7 +100,7 @@ class TaskListDataItem(BaseModel):
 
 class TaskList(CommonRsp):
     """获取用户任务列表响应体"""
-    data: List[TaskListDataItem]
+    data: List[TaskListDataItem] | None
 
 
 class ReaderDomain(CommonRsp):
@@ -141,7 +141,7 @@ class ArticleUrlData(BaseModel):
 
 class ArticleUrl(CommonRsp):
     """获取文章地址响应体"""
-    data: ArticleUrlData
+    data: ArticleUrlData | None
 
     def __str__(self):
         return self.data.__str__()
@@ -209,6 +209,37 @@ class SignData(BaseModel):
 class Sign(CommonRsp):
     """签到任务"""
     data: SignData | None
+
+
+class BalanceWithdrawData(BaseModel):
+    exchangeBefore: int
+    balance: int
+    withdrawIntegral: int
+    exchangeMoney: int
+    progress: int | None
+    minIntegralLimit: int
+
+    def __str__(self):
+        return "\n".join([
+            "【提现响应数据】",
+            f"> 原始积分: {self.exchangeBefore}",
+            f"> 剩余积分: {self.balance}",
+            f"> 消耗积分: {self.withdrawIntegral}",
+            f"> 已兑金额: {self.exchangeMoney}元"
+        ])
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class BalanceWithdraw(CommonRsp):
+    data: BalanceWithdrawData | None
+
+    def __str__(self):
+        return self.data.__str__()
+
+    def __repr__(self):
+        return self.__str__()
 
 
 if __name__ == '__main__':

@@ -93,14 +93,25 @@
 # 功能描述：第2篇文章是否继续推送（当前一篇文章被检测出来是检测文章，那么后一篇文章是否继续推送？）
 just_in_case: true
 
+# 【选填】“未知走推送”开关（可单独配置），为避免频繁推送，此功能默认关闭
+# 功能描述：如下所示，此数据返回的结果检测状态未知，目前只能通过匹配特征biz的方式来筛选
+# 此功能开关，则是用来作出选择，当放回下方所示数据时，【是走推送，还是听天由命】
+# biz匹配在逻辑前方，所以如果真到了使用这个开关的时候，那么说明biz匹配失败
+#{
+#  "jkey": "MDAwMDAwMDAwM......",
+#  "url": "https://mp.weixin.qq.com/s?__biz=Mzg2OTYyNDY1OQ==&mid=2247649861&idx=1&sn=f0216ebeec1edb6c30ba1ab54a6fec7d&scene=0#wechat_redirect"
+#}
+unknown_to_push: false
+
 # 【选填】达到指定阅读篇数，走推送通道，默认为空
 # 功能描述：不想每一轮第一篇都走推送，则可以开启此配置项（可以自行增加数量，不一定固定两个）
 # 配置方式 1：
-#custom_detected_count: [1, 101]
+#custom_detected_count: [1, 101, 151]
 # 配置方式 2:
 #custom_detected_count:
 #  - 1
 #  - 101
+#  - 151
 
 
 
@@ -117,9 +128,11 @@ account_data:
     # 功能描述：单独给此账号推送，微信要订阅 WxPusher的 -> 应用管理 -> 关注应用
     # 当 [设置了topicIds] 后，[uid可以注释/删掉]
     # 当 [未填写topicIds] 时，[uid必须填写]（!!! 一定要在 【关注应用】中订阅 !!!）
-    uid: "1"
+#    uid: "1"
     # 【选填】自动等待下批文章阅读（优先级比全局配置高）
 #    wait_next_read: true
+    # 【选填】自定义 user-agent
+#    ua: ""
 
 #  账号2:
 #    cookie: "klyd_2"
