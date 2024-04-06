@@ -202,7 +202,7 @@ class WxBusinessPusher:
         retry = 3
         while retry > 0:
             try:
-                response = httpx.post(url=url, json=data)
+                response = httpx.post(url=url, json=data, verify=False)
                 res_json = response.json()
                 errcode = res_json.get("errcode")
                 if errcode == 0:
