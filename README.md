@@ -17,10 +17,10 @@
 >
 > 开发环境Python版本: `3.10`
 
-### 2.17.2版本青龙拉库命令-v1-
+### 2.17.2版本青龙拉库命令-v2
 
 ```shell
-ql repo https://github.com/MoMingRose/WXRead.git "read" "" "*" "" "py|yaml"
+ql repo https://github.com/MoMingRose/WXRead.git "read" "" ".*" "" "py|yaml"
 ```
 
 ### 2.16.2版本
