@@ -32,7 +32,7 @@ class EntryUrl:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.142.86 Safari/537.36",
         }
-        self._client = httpx.Client(headers=headers)
+        self._client = httpx.Client(headers=headers, verify=False)
         self._result = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = []
@@ -84,6 +84,8 @@ class EntryUrl:
         else:
             page_compile = EntryUrl.COMMON_URL_REG
         result = self.__fetch_fun(page_url, page_compile)
+        if result is None:
+            return
         page_type = data.get("type", 0)
         if page_type == 0:
             url = result[0]
@@ -224,4 +226,4 @@ class EntryUrl:
 
 
 if __name__ == "__main__":
-    print(EntryUrl.get_yryd_entry_url())
+    print(EntryUrl.get_all_entry_url())
