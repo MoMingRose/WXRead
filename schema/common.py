@@ -18,6 +18,7 @@ class CommonDelayConfig(BaseModel):
 class CommonConfig(BaseModel):
     """相同的全局和局部配置（任务和任务账号配置）"""
     init_colorama: bool = Field(True, description="是否初始化colorama，当此项为True青龙面板的颜色渲染会消失，这样或许可以避免不支持颜色显示的青龙面板出现乱码的现象")
+    is_withdraw: bool | None = Field(None, description="是否进行提现操作")
     withdraw: float = Field(0, description="提现金额（单位: 元），表示只有大于等于这个数才可以提现")
     aliAccount: str | None = Field(None, description="支付宝账号，默认为空")
     aliName: str | None = Field(None, description="支付宝账号姓名，默认为空")

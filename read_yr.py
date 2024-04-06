@@ -7,7 +7,7 @@
 new Env("鱼儿阅读");
 0 45 7-23 * * * read_mm.py
 
-统一入口链接：http://72484f04031828d9e5.kgiuitq.cn/haobaobao/auth/f5097609e2ff70f696af4c1ed8b3ed4e
+统一入口链接：http://h5.pyqvr23agj8.cn/pipa_read?upuid=2068422
 
 如果进不去，可以先运行一下 “read_entry_url.py”，如果青龙任务添加成功，应该称为 “阅读入口”
 

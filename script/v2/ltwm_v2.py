@@ -64,7 +64,8 @@ class LTWMV2(WxReadTaskBase):
     # 提取“获取域名”操作返回的key值
     FETCH_KEY_COMPILE = re.compile(r"key=(.*)")
 
-    def __init__(self, config_data: LTWMConfig = load_ltwm_config()):
+    def __init__(self, config_data: LTWMConfig = load_ltwm_config(), run_read_task: bool = True):
+        self.run_read_task = run_read_task
         super().__init__(config_data, logger_name="力天微盟")
 
     def init_fields(self):
@@ -79,7 +80,6 @@ class LTWMV2(WxReadTaskBase):
         })
         # 获取用户积分信息，并输出
         user_account = self.__request_user_account()
-
         if user_account.data is None:
             if "重新登录" in user_account.message:
                 raise CookieExpired()
@@ -91,10 +91,12 @@ class LTWMV2(WxReadTaskBase):
         else:
             self.logger.info(user_account)
 
+        if not self.run_read_task:
+            self.__request_withdraw()
+            return
+        
         # 获取用户任务列表
         task_list = self.__request_taskList()
-
-        is_wait = False
 
         # 检查当前任务还有哪些未完成
         for data in task_list.data:
@@ -110,26 +112,10 @@ class LTWMV2(WxReadTaskBase):
                         self.__do_read_task()
                     except Exception as e:
                         if "本轮阅读成功完成，奖励发放中" in str(e):
-                            is_wait = True
+                            self.__request_withdraw(is_wait=True)
                         self.logger.war(f"🟡 {e}")
             if "每日签到" in data.name:
                 self.__do_sign_task()
-        if is_wait:
-            self.logger.info("5秒后开始提现, 请稍后")
-            time.sleep(5)
-        # 发起查询请求，查看当前用户积分
-        user_model = self.__request_user_account()
-        if user_model.data.balance > 1000:
-            self.logger.war("🟡 满足提现要求，准备提现...")
-            withdraw_model = self.__request_withdraw()
-            if "成功" in withdraw_model.message:
-                self.logger.info(f"🟢 提现成功! \n {withdraw_model}")
-                # 顺便请求下提现详情
-                self.__request_withdraw_detail()
-            else:
-                self.logger.error(f"🔴 提现失败, {withdraw_model.message}")
-        else:
-            self.logger.war(f"🟡 当前积分{user_model.data.balance}不满足最低提现要求, 脚本结束!")
 
     def __do_sign_task(self):
         sign_model = self.__request_sign()
@@ -207,6 +193,29 @@ class LTWMV2(WxReadTaskBase):
                 else:
                     raise StopReadingNotExit(f"阅读任务上报失败, {complete_model.message}")
 
+    def __request_withdraw(self, is_wait: bool = False):
+        # 判断是否要进行提现操作
+        if not self.is_withdraw:
+            self.logger.war(f"🟡 提现开关已关闭，已停止提现任务")
+            return
+
+        if is_wait:
+            self.logger.info("5秒后开始提现, 请稍后")
+            time.sleep(5)
+        # 发起查询请求，查看当前用户积分
+        user_model = self.__request_user_account()
+        if user_model.data.balance > 1000:
+            self.logger.war("🟡 满足提现要求，准备提现...")
+            withdraw_model = self.__request_do_withdraw()
+            if "成功" in withdraw_model.message:
+                self.logger.info(f"🟢 提现成功! \n {withdraw_model}")
+                # 顺便请求下提现详情
+                self.__request_withdraw_detail()
+            else:
+                self.logger.error(f"🔴 提现失败, {withdraw_model.message}")
+        else:
+            self.logger.war(f"🟡 当前积分{user_model.data.balance}不满足最低提现要求, 脚本结束!")
+
     def __request_withdraw_detail(self):
         return self.request_for_json(
             "POST",
@@ -216,7 +225,8 @@ class LTWMV2(WxReadTaskBase):
             data={}
         )
 
-    def __request_withdraw(self) -> BalanceWithdraw | dict:
+    def __request_do_withdraw(self) -> BalanceWithdraw | dict:
+
         return self.request_for_json(
             "POST",
             APIS.WITHDRAW,

@@ -72,7 +72,8 @@ class MMKKV2(WxReadTaskBase):
     # 提取阅读文章链接的__biz值
     ARTICLE_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&")
 
-    def __init__(self, config_data: MMKKConfig = load_mmkk_config()):
+    def __init__(self, config_data: MMKKConfig = load_mmkk_config(), run_read_task: bool = True):
+        self.run_read_task = run_read_task
         super().__init__(config_data, logger_name="😸阅读")
 
     def get_entry_url(self):

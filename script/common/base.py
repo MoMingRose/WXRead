@@ -485,6 +485,14 @@ class WxReadTaskBase(ABC):
         return ret if ret is not None else False
 
     @property
+    def is_withdraw(self):
+        """是否需要提现"""
+        ret = self.account_config.is_withdraw
+        if ret is None:
+            ret = self.config_data.is_withdraw
+        return ret if ret is not None else True
+
+    @property
     def is_need_withdraw(self):
         return self._cache.get(f"is_need_withdraw_{self.ident}", False)
 

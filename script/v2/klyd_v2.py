@@ -65,9 +65,10 @@ class KLYDV2(WxReadTaskBase):
     # 普通链接Biz提取
     NORMAL_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&", re.S)
 
-    def __init__(self, config_data: KLYDConfig = load_klyd_config()):
+    def __init__(self, config_data: KLYDConfig = load_klyd_config(), run_read_task: bool = True):
         self.detected_biz_data = config_data.biz_data
         self.base_full_url = None
+        self.run_read_task = run_read_task
         # self.exclusive_url = config_data.exclusive_url
         super().__init__(config_data=config_data, logger_name="🥤阅读")
 
@@ -105,6 +106,9 @@ class KLYDV2(WxReadTaskBase):
             # 获取推荐数据（里面包含当前阅读的信息）
             recommend_data = self.__request_recommend_json(homepage_url)
             self.__print_recommend_data(recommend_data)
+            # 判断是否需要运行阅读任务
+            if not self.run_read_task:
+                return
             # 获取加载页面跳转链接
             self.load_page_url: URL = self.__request_for_read_url()
             self.logger.info(f"获取加载页链接成功: {self.load_page_url}")
@@ -144,6 +148,10 @@ class KLYDV2(WxReadTaskBase):
         发起提现请求
         :return:
         """
+        # 判断是否要进行提现操作
+        if not self.is_withdraw:
+            self.logger.war(f"🟡 提现开关已关闭，已停止提现任务")
+            return
 
         # 先获取要进行提现的用户信息
         withdrawal_model: RspWithdrawal | dict = self.__request_withdrawal_for_userinfo()
@@ -166,7 +174,7 @@ class KLYDV2(WxReadTaskBase):
             u_ali_real_name = user_info.get("u_ali_real_name")
 
         if amount < 30 or amount // 100 < self.withdraw:
-            raise WithdrawFailed("当前账户余额达不到提现要求!")
+            raise WithdrawFailed(f"当前账户余额达不到提现要求!")
 
         if self.withdraw_type == "wx":
             self.logger.info("开始进行微信提现操作...")

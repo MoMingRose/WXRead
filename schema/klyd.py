@@ -9,7 +9,7 @@ import re
 from typing import Type, Dict
 
 from httpx import URL
-from pydantic import BaseModel, create_model, Field,  HttpUrl, validator
+from pydantic import BaseModel, create_model, Field, HttpUrl, validator
 
 from schema.common import CommonGlobalConfig, CommonPartConfig
 
@@ -27,6 +27,7 @@ class CommonKLYDConfig(BaseModel):
     withdraw_type: str = Field(None, description="提现类型: wx 微信, ali 支付宝")
     just_in_case: bool | None = Field(None, description="以防万一开关")
     unknown_to_push: bool | None = Field(None, description="未知走推送开关")
+
 
 class KLYDAccount(CommonPartConfig, CommonKLYDConfig):
     """账号配置（局部配置）"""

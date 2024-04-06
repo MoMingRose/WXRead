@@ -7,7 +7,7 @@
 new Env("可乐读书");
 0 0 7-23 * * * read_kl.py
 
-统一入口链接：http://kl04030900.6sb0be46czy.cn/?upuid=1316875
+统一入口链接：http://kl04061517.ue8vlnl7tb.cn/?upuid=1316875
 
 如果进不去，可以先运行一下 “read_entry_url.py”，如果青龙任务添加成功，应该称为 “阅读入口”
 

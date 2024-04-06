@@ -63,7 +63,8 @@ class YRYDV2(WxReadTaskBase):
     # 普通链接Biz提取
     NORMAL_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&", re.S)
 
-    def __init__(self, config_data: YRYDConfig = load_yryd_config()):
+    def __init__(self, config_data: YRYDConfig = load_yryd_config(), run_read_task: bool = True):
+        self.run_read_task = run_read_task
         self.homepage_api = None
         self.main_thread_ident = self.ident
         self.detected_biz_data = config_data.biz_data
@@ -127,6 +128,11 @@ class YRYDV2(WxReadTaskBase):
                 f"> 今日已读: {self.current_read_count}",
                 f"> 阅读规则: {r.group(4)}"
             ]))
+
+            if not self.run_read_task:
+                self.__request_withdraw()
+                return
+
             # 覆盖原API
             APIS.GET_READ_URL = r.group(5)
             _type = r.group(6)
@@ -255,6 +261,10 @@ class YRYDV2(WxReadTaskBase):
         return is_need_push
 
     def __request_withdraw(self):
+        # 判断是否要进行提现操作
+        if not self.is_withdraw:
+            self.logger.war(f"🟡 提现开关已关闭，已停止提现任务")
+            return
         # 先请求提现页面
         withdrawal_page = self.__request_withdrawal_page()
 
@@ -263,8 +273,8 @@ class YRYDV2(WxReadTaskBase):
         else:
             raise RegExpError(self.CURRENT_GOLD_COMPILE)
 
-        if float(money) < self.withdraw:
-            self.logger.war(f"🟡 账户余额 [{money}] 不足 [{self.withdraw}]，无法提现")
+        if float(money) / 100 < self.withdraw:
+            self.logger.war(f"🟡 账户余额 [{float(money) / 100}] 不足 [{self.withdraw}]，无法提现")
             return
 
         if self.withdraw_type == "wx":
