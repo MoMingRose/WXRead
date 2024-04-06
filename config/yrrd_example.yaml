@@ -48,7 +48,7 @@
 
 # 【必/选填】企业ID
 # 功能描述：当 push_types==2 且 use_robot==true 时生效，此时此项必填
-#corp_id: 123456
+#corp_id: "123456"
 # 【必/选填】应用密钥
 # 功能描述: 当 push_types==2 且 use_robot==true 时生效，此时此项必填
 #corp_secret: "123456"

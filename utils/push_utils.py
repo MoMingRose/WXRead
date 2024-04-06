@@ -62,13 +62,17 @@ class WxBusinessPusher:
         处理阅读情况
         :return:
         """
-        msg_list = []
+        user_info = None
         if is_robot:
-            msg_list.append(f"> 用户: <font color=\"info\">{situation[0]}</font>")
+            user_info = f"> 用户: <font color=\"info\">{situation[0]}</font>\n"
         else:
-            if r := WxBusinessPusher.USER_NAME_COMPILE.search(situation):
-                msg_list.append(f'<div class="highlight">> 用户: {r.group(1)}</div>')
+            if isinstance(situation, str):
+                if r := WxBusinessPusher.USER_NAME_COMPILE.search(situation):
+                    user_info = f'<div class="highlight">> 用户: {r.group(1)}</div>'
+            else:
+                user_info = f'<div class="highlight">> 用户: {situation[0]}</div>'
 
+        msg_list = []
         if isinstance(situation, tuple):
             msg_list.extend([
                 f"> 轮数: {situation[1]}",
@@ -87,10 +91,11 @@ class WxBusinessPusher:
             if r := WxBusinessPusher.CURRENT_CHAPTER_COUNT_COMPILE.search(situation):
                 msg_list.append(f"> 当前: {r.group(1)}")
 
-        return "\n".join(msg_list)
+        return user_info + "\n".join(msg_list)
 
     @staticmethod
-    def push_article_by_robot(webhook: str, title: str, link: str, is_markdown: bool = False, situation: str | tuple = None, tips: str = None,
+    def push_article_by_robot(webhook: str, title: str, link: str, is_markdown: bool = False,
+                              situation: str | tuple = None, tips: str = None,
                               **kwargs):
         """
         通过企业微信机器人推送文章
@@ -177,9 +182,8 @@ class WxBusinessPusher:
             "msgtype": "textcard",
             "textcard": {
                 "title": f"{title}",
-                "description": '''<div class="gray">{}</div>
-                    <div class="normal">【当前阅读情况】</div>\n{}
-                    <div class="highlight">{}</div>'''.format(
+                "description": '<div class="gray">{}</div>\
+<div class="normal">【当前阅读情况】</div>{}<div class="highlight">{}</div>'.format(
                     global_utils.get_date(is_fill_chinese=True), situation, tips
                 ),
                 "url": link,
@@ -246,4 +250,3 @@ class WxBusinessPusher:
             }
         })
         return access_token
-

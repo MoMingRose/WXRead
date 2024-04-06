@@ -17,7 +17,7 @@ class CommonDelayConfig(BaseModel):
 
 class CommonConfig(BaseModel):
     """相同的全局和局部配置（任务和任务账号配置）"""
-    init_colorama: bool = Field(True, description="是否初始化colorama，当此项为True青龙面板的颜色渲染会消失，这样或许可以避免不支持颜色显示的青龙面板出现乱码的现象")
+    init_colorama: bool = Field(True,                           description="是否初始化colorama，当此项为True青龙面板的颜色渲染会消失，这样或许可以避免不支持颜色显示的青龙面板出现乱码的现象")
     is_withdraw: bool | None = Field(None, description="是否进行提现操作")
     withdraw: float = Field(0, description="提现金额（单位: 元），表示只有大于等于这个数才可以提现")
     aliAccount: str | None = Field(None, description="支付宝账号，默认为空")
@@ -32,10 +32,10 @@ class CommonConfig(BaseModel):
     topicIds: str | list | None = Field(None, description="WxPusher推送通知的topicIds")
     # WxBusinessPusher Robot
     use_robot: bool | None = Field(None, description="是否使用企业微信机器人推送")
-    is_push_markdown: bool | None  = Field(None, description="是否推送MarkDown格式")
+    is_push_markdown: bool | None = Field(None, description="是否推送MarkDown格式")
     webhook_url: str | None = Field(None, description="企业微信机器人推送通知的webhook_url")
     # WxBusinessPusher
-    corp_id: int | None = Field(None, description="企业微信推送通知的企业ID")
+    corp_id: str | None = Field(None, description="企业微信推送通知的企业ID")
     corp_secret: str | None = Field(None, description="企业微信推送通知的应用密钥")
     agent_id: int | None = Field(None, description="企业微信推送通知的应用ID")
 
