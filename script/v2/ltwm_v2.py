@@ -94,10 +94,10 @@ class LTWMV2(WxReadTaskBase):
         if not self.run_read_task:
             self.__request_withdraw()
             return
-        
+
         # 获取用户任务列表
         task_list = self.__request_taskList()
-
+        is_wait = False
         # 检查当前任务还有哪些未完成
         for data in task_list.data:
             if "文章阅读" in data.name:
@@ -111,11 +111,13 @@ class LTWMV2(WxReadTaskBase):
                     try:
                         self.__do_read_task()
                     except Exception as e:
-                        if "本轮阅读成功完成，奖励发放中" in str(e):
-                            self.__request_withdraw(is_wait=True)
+                        if "本轮阅读成功完成，奖励发放中" in str(e) or "今天任务已完成" in str(e):
+                            is_wait = True
                         self.logger.war(f"🟡 {e}")
             if "每日签到" in data.name:
                 self.__do_sign_task()
+
+        self.__request_withdraw(is_wait=is_wait)
 
     def __do_sign_task(self):
         sign_model = self.__request_sign()
