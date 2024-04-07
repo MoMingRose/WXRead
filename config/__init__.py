@@ -175,5 +175,31 @@ def load_wx_business_access_token(corp_id: int, agent_id: int, file_path: str = 
         raise KeyError(f"缓存文件读取失败: {e}")
 
 
-if __name__ == '__main__':
-    print(load_yryd_config())
+detected_file_path = os.path.join(cache_dir, "detected.yaml")
+
+
+def load_detected_data() -> set:
+    """读取检测数据，返回去重后的数据"""
+    if not os.path.exists(detected_file_path):
+        return set()
+    try:
+        with open(detected_file_path, "r", encoding="utf-8") as fp:
+            data = yaml.safe_load(fp)
+        return set(data)
+    except (IOError, yaml.YAMLError) as e:
+        print(f"检测数据加载失败: {e}")
+    except TypeError:
+        print("配置文件内容有误，请检查")
+
+
+def store_detected_data(new_data: set, old_data: set = None):
+    if old_data is not None:
+        old_data.update(new_data)
+    else:
+        old_data = new_data
+    try:
+        with open(detected_file_path, "w", encoding="utf-8") as fp:
+            yaml.dump(list(old_data), fp)
+        return True
+    except (IOError, yaml.YAMLError) as e:
+        print(f"检测数据更新失败: {e}")

@@ -22,6 +22,7 @@ import httpx
 from httpx import URL
 from pydantic import BaseModel, ValidationError
 
+from config import load_detected_data, store_detected_data
 from exception.common import PauseReadingTurnNextAndCheckWait, Exit, StopReadingNotExit, ExitWithCodeChange, \
     CookieExpired, \
     RspAPIChanged, PauseReadingTurnNext
@@ -68,7 +69,7 @@ class WxReadTaskBase(ABC):
         self.base_headers = self.build_base_headers()
         self.global_kwargs = kwargs
         # 构建主线程客户端
-        self.main_client = httpx.Client(headers=self.base_headers, timeout=10)
+        self.main_client = httpx.Client(headers=self.base_headers, timeout=10, verify=False)
         # # 构建基本客户端
         # self.base_client = httpx.Client(headers=self.base_headers, timeout=10)
 
@@ -108,6 +109,20 @@ class WxReadTaskBase(ABC):
             ])
         ))
 
+        if kwargs.pop("load_detected", False):
+            self.logger.info("")
+            self.logger.war("> > 🟡 正在加载本地文章检测数据...")
+            self.logger.war("> > 🟡 [Tips] 此数据会在程序运行过程中自动收集检测未通过时的文章链接")
+            self.detected_data = load_detected_data()
+            if self.detected_data is not None:
+                self.logger.info(f"> > 🟢 加载成功! 当前已自动收集检测文章个数: {len(self.detected_data)}")
+            else:
+                self.logger.war("> > 🟡 本地暂无检测文章数据")
+            self.logger.info("")
+        else:
+            self.detected_data = set()
+        self.new_detected_data = set()
+
         self.wait_queue = Queue()
 
         with ThreadPoolExecutor(max_workers=thread_count, thread_name_prefix="MoMingLog") as executor:
@@ -116,7 +131,9 @@ class WxReadTaskBase(ABC):
                 # 接下来的程序都是在主线程中执行
                 executor.submit(self.start_queue)
 
-        self.wait_queue.join()
+        if not self.wait_queue.empty():
+            self.wait_queue.join()
+
 
     @abstractmethod
     def init_fields(self):
@@ -167,6 +184,10 @@ class WxReadTaskBase(ABC):
             self.logger.exception(e)
             sys.exit(0)
         finally:
+            if self.new_detected_data:
+                self.logger.war(f"> > 🟡 正在存储新的检测数据...")
+                if store_detected_data(self.new_detected_data, old_data=self.detected_data):
+                    self.logger.info(f"> > 🟢 存储成功，此次自动收集检测文章个数: {len(self.new_detected_data)}")
             if self.lock.locked():
                 self.lock.release()
         #     self.base_client = None
@@ -285,7 +306,7 @@ class WxReadTaskBase(ABC):
 
     def request_for_json(self, method: str, url: str | URL, prefix: str, *args, client: httpx.Client = None,
                          model: Type[BaseModel] = None,
-                         **kwargs) -> dict | BaseModel | str:
+                         **kwargs) -> dict | BaseModel | str | None:
         """获取json数据"""
 
         update_headers = kwargs.pop("update_headers", {})
@@ -296,7 +317,7 @@ class WxReadTaskBase(ABC):
             "Accept": "application/json, text/plain, */*",
             **update_headers,
         }, ret_types=[RetTypes.JSON, *ret_types], **kwargs)
-        if model is not None:
+        if model is not None and ret is not None:
             ret = self.__to_model(model, ret)
         return ret
 
@@ -403,7 +424,7 @@ class WxReadTaskBase(ABC):
                 return ret_data[0]
             return ret_data
         except (httpx.ConnectTimeout, httpx.ReadTimeout) as e:
-            self.logger.error(f"请求超时, 剩余重试次数：{retry_count}")
+            self.logger.error(f"请求超时, 剩余重试次数：{retry_count - 1}")
             if retry_count > 0:
                 if flag:
                     client.close()
@@ -584,9 +605,9 @@ class WxReadTaskBase(ABC):
             self._cache[client_name] = client
         return client
 
-    def sleep_fun(self, is_pushed: bool = False):
+    def sleep_fun(self, is_pushed: bool = False, prefix: str = ""):
         t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
-        self.logger.info(f"等待检测完成, 💤 睡眠{t}秒" if is_pushed else f"💤 随机睡眠{t}秒")
+        self.logger.info(f"等待检测{prefix}完成, 💤 睡眠{t}秒" if is_pushed else f"💤 {prefix}随机睡眠{t}秒")
         # 睡眠随机时间
         time.sleep(t)
 

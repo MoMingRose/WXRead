@@ -16,7 +16,7 @@ from httpx import URL
 from config import load_klyd_config
 from exception.common import PauseReadingTurnNextAndCheckWait, StopReadingNotExit, CookieExpired, RspAPIChanged, \
     ExitWithCodeChange, \
-    FailedPushTooManyTimes, NoSuchArticle, RegExpError
+    FailedPushTooManyTimes, NoSuchArticle, RegExpError, PauseReadingTurnNext
 from exception.klyd import FailedPassDetect, \
     WithdrawFailed
 from schema.klyd import KLYDConfig, RspRecommend, RspReadUrl, RspDoRead, RspWithdrawal, RspWithdrawalUser
@@ -70,7 +70,7 @@ class KLYDV2(WxReadTaskBase):
         self.base_full_url = None
         self.run_read_task = run_read_task
         # self.exclusive_url = config_data.exclusive_url
-        super().__init__(config_data=config_data, logger_name="🥤阅读")
+        super().__init__(config_data=config_data, logger_name="🥤阅读", load_detected=True)
 
     def get_entry_url(self):
         return EntryUrl.get_klrd_entry_url()[0]
@@ -264,19 +264,55 @@ class KLYDV2(WxReadTaskBase):
         :return:
         """
         is_need_push = False
-        is_pushed = False
+        is_need_increase = False  # 是否需要自增计数
+
         retry_count = 2
         turn_count = self.current_read_count // 30 + 1
         self.logger.war(f"🟡 当前是第[{turn_count}]轮阅读")
         read_count = self.current_read_count % 30 + 1
+        # 打印阅读情况
+        if self.current_read_count != 0:
+            msg = f"🟡 准备阅读第[{turn_count} - {read_count}]篇, 已成功阅读[{self.current_read_count}]篇"
+        else:
+            msg = f"🟡 准备阅读[{turn_count} - {read_count}]篇"
+        self.logger.war(msg)
+
+        retry_count_when_None = retry_count
+        retry_count_when_exp_access = retry_count
+
+        article_map = {}
+
+        t_c = 0
 
         while True:
-            # 发起完成阅读请求，从而获取下一次阅读的文章链接
+            # 发起初始请求，获取阅读文章链接数据
             res_model = self.__request_for_do_read_json(full_api_path)
+            # 判断是否阅读成功，并且获得了奖励
+
+            if res_model is None:
+                if retry_count_when_None == 0:
+                    raise PauseReadingTurnNext("完成阅读数据返回为空次数过多，为避免封号和黑号，暂停此用户阅读")
+                if retry_count_when_None > 0:
+                    self.logger.error("完成阅读失败，数据返回为空, 尝试重新请求")
+                    retry_count_when_None -= 1
+                    # 睡眠
+                    self.sleep_fun(False)
+                    continue
+            else:
+                # 如果模型数据不为空，那么这里判断上一篇文章的检测结果是否成功
+                if res_model.success_msg and "获得" in res_model.success_msg:
+                    if t_c <= 1:
+                        s = f'🟢✅️ [{turn_count} - {read_count}] {res_model.success_msg}'
+                    else:
+                        s = f'🟢✅️ [{turn_count} - {read_count - 1}] {res_model.success_msg}'
+                    self.logger.info(s)
+                    read_count += 1
+                    self.current_read_count += 1
             # 获取有效的返回个数
             ret_count = res_model.ret_count
             if ret_count == 3 and res_model.jkey is None:
                 # 如果是3个，且没有jkey返回，则大概率就是未通过检测
+                self.new_detected_data.add(article_map.get(f"{turn_count} - {read_count - 1}", ""))
                 if res_model.is_pass_failed:
                     raise FailedPassDetect()
                 else:
@@ -285,10 +321,35 @@ class KLYDV2(WxReadTaskBase):
             article_url = res_model.url
             # 判断当前阅读状态是否被关闭
             if article_url == "close":
-                if "本轮阅读已完成" == res_model.success_msg:
-                    self.logger.info(f"🟢✔️ {res_model.success_msg}")
+
+                if res_model.msg and res_model.msg is not None:
+                    msg = res_model.msg
+                else:
+                    msg = res_model.success_msg
+
+                if "本轮阅读已完成" == msg:
+                    self.logger.info(f"🟢✔️ {msg}")
                     return
-                raise FailedPassDetect(f"🟢⭕️ {res_model.success_msg}")
+                if "任务获取失败" in msg:
+                    self.wait_queue.put(5)
+                    self.wait_queue.put(self.logger.name)
+                    raise StopReadingNotExit(f"检测到任务获取失败，当前可能暂无文章返回，线程自动睡眠5分钟后重启")
+                if "检测未通过" in msg:
+                    last_article_url = article_map.get(f"{turn_count} - {read_count - 1}", "")
+                    if last_article_url:
+                        self.new_detected_data.add(last_article_url)
+                    raise FailedPassDetect(f"🟢⭕️ {msg}")
+                if "异常访问" in msg:
+                    self.logger.error(msg)
+                    if retry_count_when_exp_access > 0:
+                        self.logger.war("正在准备重试...")
+                        time.sleep(2)
+                        retry_count_when_exp_access -= 1
+                        continue
+                    else:
+                        raise StopReadingNotExit("异常访问重试次数过多，当前用户停止执行!")
+
+                raise FailedPassDetect(f"🟢⭕️ {msg}")
             # 抓包时偶然看到返回的数据（猜测应该是晚上12点前后没有阅读文章）
             if ret_count == 1 and article_url is None:
                 # 这里做一下重试，固定重试次数为 2
@@ -310,14 +371,14 @@ class KLYDV2(WxReadTaskBase):
             if article_url is None:
                 raise ValueError(f"🔴 返回的阅读文章链接为None, 或许API关键字更新啦, 响应模型为：{res_model}")
 
-            # 打印阅读情况
-            if self.current_read_count != 0:
-                msg = f"🟡 准备阅读第[{turn_count} - {read_count}]篇, 已成功阅读[{self.current_read_count}]篇"
+            if t_c >= 1:
+                # 打印阅读情况
+                self.logger.war(f"🟡 准备阅读第[{turn_count} - {read_count}]篇, 已成功阅读[{self.current_read_count}]篇")
             else:
-                msg = f"🟡 准备阅读[{turn_count} - {read_count}]篇"
-            self.logger.war(msg)
-
+                t_c += 1
             self.logger.info(f"【第 [{turn_count} - {read_count}] 篇文章信息】\n{self.parse_wx_article(article_url)}")
+
+            article_map[f"{turn_count} - {read_count}"] = article_url
 
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
@@ -328,6 +389,10 @@ class KLYDV2(WxReadTaskBase):
             # 判断是否是检测文章
             elif "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
                 self.logger.war(f"🟡 出现包含检测特征的文章链接，走推送通道!")
+                is_need_push = True
+            # 判断是否是检测文章
+            elif article_url in self.detected_data or article_url in self.new_detected_data:
+                self.logger.war(f"🟡 出现被标记的文章链接, 走推送通道!")
                 is_need_push = True
             # 判断是否是检测文章
             elif biz_match and biz_match.group(1) in self.detected_biz_data:
@@ -341,7 +406,8 @@ class KLYDV2(WxReadTaskBase):
                     self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
                     is_need_push = True
                 else:
-                    if self.unknown_to_push:
+                    # 判断是否开启了“未知走推送”开关，以及当前是第2次循环及以上
+                    if self.unknown_to_push and t_c > 1:
                         self.logger.war(f"🟡 “未知走推送”已开启，当前文章走推送通道!")
                         is_need_push = True
                     else:
@@ -349,19 +415,16 @@ class KLYDV2(WxReadTaskBase):
                             f"🟡 “未知走推送”未开启, 阅读成功与否听天由命, 响应数据如下: \n{res_model.dict()}")
             elif ret_count == 4:
                 # 表示正处于检测中
-                self.logger.war(f"🟡 此次检测结果为：{res_model.success_msg}")
+                self.logger.war(f"🟡 上篇文章[{turn_count} - {read_count - 1}]检测结果为：{res_model.success_msg}")
                 if self.just_in_case:
                     self.logger.war(f"🟡 “以防万一”已开启，下一篇仍然推送")
                     is_need_push = True
+                # 判断是否是阅读成功，如果是则标记上一个文章链接
+                if "阅读成功" in res_model.success_msg:
+                    self.new_detected_data.add(article_map.get(f"{turn_count} - {read_count - 1}", ""))
             elif ret_count == 3 and res_model.jkey is not None:
-                # 如果是3个，且有jkey返回，则表示已经通过检测
-                if "成功" in res_model.success_msg:
-                    # 当前阅读篇数自增1
-                    self.current_read_count += 1
-                    read_count += 1
-                    self.logger.info(f"🟢✅️ {res_model.success_msg}")
-                else:
-                    self.logger.error(f"🟢❌️ {res_model.success_msg}")
+                if "阅读成功" not in res_model.success_msg:
+                    self.logger.error(f"🔴 {res_model.success_msg}")
                 # 没有看到要用什么，但是每次do_read都会请求2遍，故这里也添加调用
                 time.sleep(random.randint(1, 3))
                 self.__request_for_read_url()
@@ -372,30 +435,11 @@ class KLYDV2(WxReadTaskBase):
 
             # 先推送
             if is_need_push:
-                # 走推送的时候
-                # 下方阅读数量自动 + 1
-                read_count += 1
-                self.current_read_count += 1
-                push_types = self.push_types
-                push_result = []
-                if 1 in push_types:
-                    push_result.append(self.wx_pusher(res_model.url, detecting_count=read_count))
-                if 2 in push_types:
-                    push_result.append(self.wx_business_pusher(
-                        res_model.url,
-                        detecting_count=read_count,
-                        situation=(
-                            self.logger.name, turn_count, read_count - 1, self.current_read_count, read_count),
-                        tips=f"请尽快在指定时间{self.push_delay[0]}秒内阅读完此篇文章"
-                    ))
-
-                # 只要其中任意一个推送成功，则赋值为True
-                is_pushed = any(push_result)
-                # 如果推送失败
-                if not is_pushed:
-                    # 直接抛出异常
-                    raise FailedPushTooManyTimes()
+                is_pushed = self.__push_article(article_url, turn_count, read_count)
                 is_need_push = False
+                # 当前阅读篇数自增1
+                self.current_read_count += 1
+                read_count += 1
             else:
                 is_pushed = False
 
@@ -404,8 +448,31 @@ class KLYDV2(WxReadTaskBase):
                 part_api_path,
                 jkey=res_model.jkey
             )
-
+            # 随机睡眠，模拟阅读时间
             self.sleep_fun(is_pushed)
+            # 重置重试次数
+
+    def __push_article(self, article_url, turn_count, read_count):
+        push_types = self.push_types
+        push_result = []
+        if 1 in push_types:
+            push_result.append(self.wx_pusher(article_url, detecting_count=read_count))
+        if 2 in push_types:
+            push_result.append(self.wx_business_pusher(
+                article_url,
+                detecting_count=read_count,
+                situation=(
+                    self.logger.name, turn_count, read_count, self.current_read_count, self.current_read_count + 1),
+                tips=f"请尽快在指定时间{self.push_delay[0]}秒内阅读完此篇文章"
+            ))
+
+        # 只要其中任意一个推送成功，则赋值为True
+        is_pushed = any(push_result)
+        # 如果推送失败
+        if not is_pushed:
+            # 直接抛出异常
+            raise FailedPushTooManyTimes()
+        return is_pushed
 
     def __request_for_do_read_json(self, do_read_full_path: str) -> RspDoRead | dict:
         ret = self.request_for_json(
@@ -514,18 +581,25 @@ class KLYDV2(WxReadTaskBase):
             elif "阅读限制" in msg or "任务上限" in msg or "微信限制" in msg:
                 raise StopReadingNotExit(msg)
 
-    def __request_for_read_url(self) -> URL:
+    def __request_for_read_url(self, retry: int = 3) -> URL:
         """
         获取阅读链接
         :return:
         """
-        data: RspReadUrl | dict = self.request_for_json(
+        data: RspReadUrl | dict | None = self.request_for_json(
             "GET",
             APIS.GET_READ_URL,
             "请求阅读链接 base_client",
             model=RspReadUrl,
             client=self.base_client
         )
+        if data is None:
+            if retry <= 0:
+                raise StopReadingNotExit("获取阅读链接重试次数过多，停止运行")
+            else:
+                self.logger.war(f"获取阅读链接失败，准备重新获取，剩余重试次数: {retry - 1}")
+                return self.__request_for_read_url(retry=retry - 1)
+
         if isinstance(data, RspReadUrl):
             return data.link
         try:

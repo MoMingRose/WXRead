@@ -9,7 +9,7 @@ from typing import Dict, Type
 
 from pydantic import BaseModel, Field, create_model
 
-from schema.common import CommonGlobalConfig, CommonDelayConfig, CommonPartConfig
+from schema.common import CommonGlobalConfig, CommonPartConfig
 
 __all__ = [
     "MMKKConfig",

@@ -203,6 +203,10 @@ class RspDoRead(BaseModel):
                   "jkey": "MDAwMDAwMDAwMH6et2yHiryRsqu64L67gKOXfIvLlWra145qlc2LjI2BlKDGmIZmypO5qtTXu6iMaoh6nbSIfdLNmGvMmA",
                   "url": null
                 }
+                {
+                  "msg": "异常访问，请重试",
+                  "url": "close"
+                }
             - 检测失败
                 {
                   "success_msg": "检测未通过",
