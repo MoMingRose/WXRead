@@ -18,7 +18,7 @@ class CommonYRYDConfig(BaseModel):
 
 class YRYDAccount(CommonPartConfig, CommonYRYDConfig):
     """鱼儿阅读（局部配置）"""
-    cookie: str
+    cookie: str | None = Field(None, description="用户cookie")
 
 
 class BaseYRYDGlobalConfig(CommonGlobalConfig, CommonYRYDConfig):
@@ -41,6 +41,6 @@ class RspReadUrl(BaseModel):
 
 class RspDoRead(BaseModel):
     """do_read响应"""
-    error_msg: str | None
+    error_msg: str | None = Field(None, description="错误信息")
     jkey: str | None
     url: str | HttpUrl | None

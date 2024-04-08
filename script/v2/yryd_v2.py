@@ -35,11 +35,11 @@ class YRYDV2(WxReadTaskBase):
     # 当前脚本作者
     CURRENT_SCRIPT_AUTHOR = "MoMingLog"
     # 当前脚本版本
-    CURRENT_SCRIPT_VERSION = "2.0.0"
+    CURRENT_SCRIPT_VERSION = "2.0.1"
     # 当前脚本创建时间
     CURRENT_SCRIPT_CREATED = "2024-04-03"
     # 当前脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04-03"
+    CURRENT_SCRIPT_UPDATED = "2024-04-08"
     # 当前任务名称
     CURRENT_TASK_NAME = "鱼儿阅读"
 
@@ -68,7 +68,7 @@ class YRYDV2(WxReadTaskBase):
         self.homepage_api = None
         self.main_thread_ident = self.ident
         self.detected_biz_data = config_data.biz_data
-        super().__init__(config_data, logger_name="🐟️阅读")
+        super().__init__(config_data, logger_name="🐟️阅读", load_detected=True)
 
     def get_entry_url(self):
         return EntryUrl.get_yryd_entry_url()
@@ -106,10 +106,39 @@ class YRYDV2(WxReadTaskBase):
     def run(self, name):
         self.base_client.base_url = self.main_client.base_url
         self.read_client.base_url = self.main_client.base_url
+        # 判断 cookie中是否有 PHPSESSID
+        if "PHPSESSID" in self.origin_cookie:
+            # 再为当前用户更新对应配置的cookie
+            self.read_client.cookies = self.cookie_dict
+            self.base_client.cookies = self.cookie_dict
+            self.entry_func_for_cookie()
+        else:
+            self.read_client.headers.update({
+                "Cookie": self.origin_cookie
+            })
+            self.base_client.headers.update({
+                "Cookie": self.origin_cookie
+            })
+            self.entry_func_for_id()
 
-        # 再为当前用户更新对应配置的cookie
-        self.read_client.cookies = self.cookie_dict
-        self.base_client.cookies = self.cookie_dict
+    def entry_func_for_id(self):
+        """
+        使用ID进行阅读的入口函数
+        :return:
+        """
+        # 拼接获取阅读链接的URL
+        api_path = f"{APIS.GET_READ_URL}?iu=iuMjA4ODc0OQ2"
+        # read_url_model = self.__request_read_url(api_path)
+        # self.logger.info(read_url_model)
+        self.logger.war("🟡 当前正在通过ID进行阅读操作（ID无法获取用户信息和提现, 只能进行阅读操作）...")
+        self.current_read_count = 0
+        self.__start_read(turn_count=1, read_url_api_path=api_path)
+
+    def entry_func_for_cookie(self):
+        """
+        使用Cookie进行阅读的入口函数
+        :return:
+        """
         # 尝试获取主页源代码
         homepage_html = self.request_for_page(
             self.homepage_api,
@@ -143,9 +172,12 @@ class YRYDV2(WxReadTaskBase):
         else:
             raise RegExpError(self.HOMEPAGE_COMPILE)
 
-    def __start_read(self, _type, turn_count, retry: int = 3):
+    def __start_read(self, _type=7, turn_count=None, retry: int = 3, read_url_api_path: str = None):
+        self.logger.war("🟡 正在获取阅读链接...")
+        read_url_model = self.__request_read_url(read_url_api_path)
         # 获取阅读加载页链接
-        read_url: URL = self.__get_read_url()
+        read_url: URL = self.__get_read_url(read_url_model)
+
         # 构建完整阅读链接
         full_read_url = f"{read_url}&type={_type}"
         # 更新read_client请求头
@@ -156,6 +188,7 @@ class YRYDV2(WxReadTaskBase):
         read_count = self.current_read_count % 30 + 1
         jkey = None
         use_user_cookie = False
+        article_map = {}
         while True:
             # 请求加载页源代码
             loading_page = self.__request_loading_page(full_read_url, use_user_cookie)
@@ -188,6 +221,9 @@ class YRYDV2(WxReadTaskBase):
                                 # 重试次数已归零则抛出异常
                                 raise PauseReadingTurnNext("重新获取阅读链接次数已用尽!")
                         elif "当前已经被限制" in unquote_url:
+                            last_article_url = article_map.get(f"{turn_count} - {read_count - 1}", "")
+                            if last_article_url:
+                                self.new_detected_data.add(last_article_url)
                             self.logger.error("🔴 当前已经被限制，请明天再来")
                             return
                         # 更新下一次 do_read 链接的 jkey 参数
@@ -203,6 +239,8 @@ class YRYDV2(WxReadTaskBase):
 
                         self.logger.info(
                             f"【第 [{turn_count} - {read_count}] 篇文章信息】\n{self.parse_wx_article(article_url)}")
+
+                        article_map[f"{turn_count} - {read_count}"] = article_url
 
                         self.__check_article_url(article_url, turn_count, read_count)
                         # 无法判断是否阅读成功，股这里直接自增
@@ -228,6 +266,10 @@ class YRYDV2(WxReadTaskBase):
         # 判断下一篇阅读计数是否达到指定检测数
         if self.current_read_count + 1 in self.custom_detected_count:
             self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
+            is_need_push = True
+            # 判断是否是检测文章
+        elif article_url in self.detected_data or article_url in self.new_detected_data:
+            self.logger.war(f"🟡 出现被标记的文章链接, 走推送通道!")
             is_need_push = True
         # 判断是否是检测文章
         elif "chksm" in article_url or not self.ARTICLE_LINK_VALID_COMPILE.match(article_url):
@@ -365,14 +407,11 @@ class YRYDV2(WxReadTaskBase):
             client=self.main_client if not use_user_cookie else self.read_client
         )
 
-    def __get_read_url(self) -> URL:
+    def __get_read_url(self, read_url_model) -> URL:
         """
         获取阅读链接
         :return:
         """
-        self.logger.war("🟡 正在获取阅读链接...")
-        read_url_model = self.__request_read_url()
-
         read_url = None
 
         if isinstance(read_url_model, RspReadUrl) and (read_url := read_url_model.jump):
@@ -394,10 +433,11 @@ class YRYDV2(WxReadTaskBase):
         else:
             raise StopReadingNotExit("阅读链接获取失败!")
 
-    def __request_read_url(self) -> RspReadUrl | dict:
+    def __request_read_url(self, api_path: str = None) -> RspReadUrl | dict:
+
         return self.request_for_json(
             "GET",
-            APIS.GET_READ_URL,
+            APIS.GET_READ_URL if api_path is None else api_path,
             "请求阅读链接 read_client",
             client=self.read_client,
             model=RspReadUrl,
