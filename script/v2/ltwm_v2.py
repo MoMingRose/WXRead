@@ -113,7 +113,7 @@ class LTWMV2(WxReadTaskBase):
                     except Exception as e:
                         if "本轮阅读成功完成，奖励发放中" in str(e) or "今天任务已完成" in str(e):
                             is_wait = True
-                            return
+                            continue
                         self.logger.exception(f"🔴 阅读任务异常：{e}")
             if "每日签到" in data.name:
                 self.__do_sign_task()

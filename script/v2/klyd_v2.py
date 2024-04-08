@@ -410,7 +410,7 @@ class KLYDV2(WxReadTaskBase):
                     if self.unknown_to_push and t_c > 1:
                         self.logger.war(f"🟡 “未知走推送”已开启，当前文章走推送通道!")
                         is_need_push = True
-                    else:
+                    elif not self.unknown_to_push:
                         self.logger.war(
                             f"🟡 “未知走推送”未开启, 阅读成功与否听天由命, 响应数据如下: \n{res_model.dict()}")
             elif ret_count == 4:

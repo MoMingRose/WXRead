@@ -185,9 +185,9 @@ class WxReadTaskBase(ABC):
             sys.exit(0)
         finally:
             if self.new_detected_data:
-                self.logger.war(f"> > 🟡 正在存储新的检测数据...")
+                self.logger.war(f"🟡 正在存储新的检测数据...")
                 if store_detected_data(self.new_detected_data, old_data=self.detected_data):
-                    self.logger.info(f"> > 🟢 存储成功，此次自动收集检测文章个数: {len(self.new_detected_data)}")
+                    self.logger.info(f"🟢 存储成功，此次自动收集检测文章个数: {len(self.new_detected_data)}")
             if self.lock.locked():
                 self.lock.release()
         #     self.base_client = None
