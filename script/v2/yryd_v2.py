@@ -8,7 +8,7 @@
 import random
 import re
 import time
-from urllib.parse import unquote
+from urllib.parse import unquote, unquote_plus
 
 from httpx import URL
 
@@ -127,10 +127,12 @@ class YRYDV2(WxReadTaskBase):
         :return:
         """
         # 拼接获取阅读链接的URL
-        api_path = f"{APIS.GET_READ_URL}?iu=iuMjA4ODc0OQ2"
+        api_path = f"{APIS.GET_READ_URL}?iu=iuMjA2ODc0OQ2"
         # read_url_model = self.__request_read_url(api_path)
         # self.logger.info(read_url_model)
         self.logger.war("🟡 当前正在通过ID进行阅读操作（ID无法获取用户信息和提现, 只能进行阅读操作）...")
+        self.logger.war("🟡 由于无法获取用户信息，故每次运行默认为第1轮第1篇!")
+        time.sleep(5)
         self.current_read_count = 0
         self.__start_read(turn_count=1, read_url_api_path=api_path)
 
@@ -205,7 +207,7 @@ class YRYDV2(WxReadTaskBase):
                     do_read_model = self.__request_do_read()
                     # 判断是否转换模型成功，并且article_url存在
                     if isinstance(do_read_model, RspDoRead) and (article_url := do_read_model.url):
-                        unquote_url = unquote(article_url)
+                        unquote_url = unquote_plus(article_url)
                         # 判断当前阅读链接是否已经失效
                         if "链接失效" in unquote_url:
                             # 判断当前递归重试次数是否大于0
