@@ -55,7 +55,7 @@ class YRYDV2(WxReadTaskBase):
     # 提取提款界面的原有支付宝账号
     WITHDRAWAL_PAGE_COMPILE = re.compile(r"id=['\"](?:u_ali_real_name|u_ali_account).*?value=['\"](.*?)['\"]", re.S)
     # 提款界面的当前余额
-    CURRENT_GOLD_COMPILE = re.compile(r"当前余额.*?>(\d+)<", re.S)
+    CURRENT_GOLD_COMPILE = re.compile(r"当前余额.*?>(\d+\.?\d*)<", re.S)
     # 检测有效阅读链接
     ARTICLE_LINK_VALID_COMPILE = re.compile(
         r"^https?://mp.weixin.qq.com/s\?__biz=[^&]*&mid=[^&]*&idx=\d*&(?!.*?chksm).*?&scene=\d*#wechat_redirect$")
