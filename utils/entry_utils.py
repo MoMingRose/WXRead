@@ -226,4 +226,4 @@ class EntryUrl:
 
 
 if __name__ == "__main__":
-    print(EntryUrl.get_all_entry_url())
+    print(EntryUrl.get_yryd_entry_url())

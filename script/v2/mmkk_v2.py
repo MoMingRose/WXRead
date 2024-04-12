@@ -79,10 +79,10 @@ class MMKKV2(WxReadTaskBase):
     def get_entry_url(self):
         return EntryUrl.get_mmkk_entry_url()
 
-    def init_fields(self):
+    def init_fields(self, retry_count=3):
         pass
 
-    def run(self, name):
+    def run(self, name, *args, **kwargs):
         pass
 
 

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from schema.klyd import KLYDConfig
 from schema.ltwm import LTWMConfig
 from schema.mmkk import MMKKConfig
+from schema.xyy import XYYConfig
 from schema.yryd import YRYDConfig
 from utils import md5
 
@@ -114,6 +115,14 @@ def load_ltwm_config() -> LTWMConfig:
     :return:
     """
     return __load_config("力天微盟", "ltwm", LTWMConfig)
+
+
+def load_xyy_config() -> XYYConfig:
+    """
+    加载 小阅阅 阅读的配置
+    :return:
+    """
+    return __load_config("小阅阅", "xyy", XYYConfig)
 
 
 cache_dir = os.path.join(root_dir, "cache")

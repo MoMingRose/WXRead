@@ -56,6 +56,13 @@ class WxReadTaskBase(ABC):
     # 文章Biz
     ARTICLE_BIZ_COMPILE = re.compile(r"og:url.*?__biz=(.*?)&", re.S)
 
+    # 普通链接Biz提取
+    NORMAL_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&", re.S)
+
+    # 检测有效阅读链接
+    ARTICLE_LINK_VALID_COMPILE = re.compile(
+        r"^https?://mp.weixin.qq.com/s\?__biz=[^&]*&mid=[^&]*&idx=\d*&(?!.*?chksm).*?&scene=\d*#wechat_redirect$")
+
     def __init__(self, config_data, logger_name: str, *args, **kwargs):
         self.config_data = config_data
         self.lock = threading.Lock()
@@ -86,6 +93,8 @@ class WxReadTaskBase(ABC):
             thread_count = min(max_thread_count, len(self.accounts))
         else:
             thread_count = len(self.accounts)
+
+        self.max_thread_count = thread_count
 
         self.logger.info(NestedLogColors.blue(
             "\n".join([
@@ -123,10 +132,11 @@ class WxReadTaskBase(ABC):
             self.detected_data = set()
         self.new_detected_data = set()
 
+        self.cacahe_queue = Queue()
         self.wait_queue = Queue()
 
         with ThreadPoolExecutor(max_workers=thread_count, thread_name_prefix="MoMingLog") as executor:
-            self.futures = [executor.submit(self._base_run, name) for name in self.accounts.keys()]
+            self.futures = [executor.submit(self._base_run, name, executor) for name in self.accounts.keys()]
             for future in as_completed(self.futures):
                 # 接下来的程序都是在主线程中执行
                 executor.submit(self.start_queue)
@@ -134,15 +144,19 @@ class WxReadTaskBase(ABC):
         if not self.wait_queue.empty():
             self.wait_queue.join()
 
-
     @abstractmethod
-    def init_fields(self):
-        """这个方法执行在主线程中，可以用来进行账号运行前的初始化操作"""
+    def init_fields(self, retry_count: int = 3):
+        """这个方法执行在主线程中，可以用来进行账号运行前的初始化操作
+        :param retry_count:
+        """
         pass
 
     @abstractmethod
-    def run(self, name):
-        """账号运行的主入口"""
+    def run(self, name, *args, **kwargs):
+        """账号运行的主入口
+        :param *args:
+        :param **kwargs:
+        """
         pass
 
     @abstractmethod
@@ -150,12 +164,12 @@ class WxReadTaskBase(ABC):
         """返回入口链接"""
         pass
 
-    def _base_run(self, name):
+    def _base_run(self, name, executor):
         # 接下来的程序都是在线程中执行
         # 将用户名存入字典中（用于设置logger的prefix）
         self.thread2name[self.ident] = name
         try:
-            self.run(name)
+            self.run(name, executor=executor)
         except (StopReadingNotExit, WithdrawFailed, CookieExpired) as e:
             self.logger.war(e)
             return
@@ -201,24 +215,30 @@ class WxReadTaskBase(ABC):
             self.__start_wait_next_read(wait_time, name)
             self.wait_queue.task_done()
 
-    def __start_wait_next_read(self, wait_minute, name):
+    def __start_wait_next_read(self, wait_minute, name, last_wait_minute: int = None):
         self.thread2name[self.ident] = name
-        self.logger.error("等待下次阅读")
-        random_sleep_min = random.randint(1, 5)
-        self.logger.info(f"随机延迟【{random_sleep_min}】分钟")
-        self.logger.info(f"💤 程序将自动睡眠【{wait_minute + random_sleep_min}】分钟后开始阅读")
-        # 获取将来运行的日期
-        # 先获取时间戳
-        future_timestamp = int(time.time()) + int(wait_minute + random_sleep_min) * 60
-        from datetime import datetime
-        future_date = datetime.fromtimestamp(future_timestamp)
-        self.logger.info(f"🟢 预计将在【{future_date}】阅读下一批文章")
-        # 睡眠
-        self.logger.info(f"💤 💤 💤 睡眠中...")
-        time.sleep(wait_minute * 60)
-        self.logger.info(f"🟡 程序即将开始运行，剩余时间 {random_sleep_min} 分钟")
-        time.sleep(random_sleep_min * 60)
-        self.logger.info(f"🟢 程序已睡眠结束")
+        # 判断上一次等待时间是否不为空
+        if last_wait_minute is not None:
+            # 求差值，如果上一次等待时间大于此次等待时间，并且线程数为 1，则直接开始运行
+            if wait_minute - last_wait_minute <= 0 and self.max_thread_count == 1:
+                self.logger.info("🟢 程序已睡眠结束")
+        else:
+            random_sleep_min = random.randint(1, 5)
+            self.logger.info(f"随机延迟【{random_sleep_min}】分钟")
+            self.logger.info(f"💤 程序将自动睡眠【{wait_minute + random_sleep_min}】分钟后开始阅读")
+            # 获取将来运行的日期
+            # 先获取时间戳
+            future_timestamp = int(time.time()) + int(wait_minute + random_sleep_min) * 60
+            from datetime import datetime
+            future_date = datetime.fromtimestamp(future_timestamp)
+            self.logger.info(f"🟢 预计将在【{future_date}】阅读下一批文章")
+            # 睡眠
+            self.logger.info(f"💤 💤 💤 睡眠中...")
+            time.sleep(wait_minute * 60)
+            self.logger.info(f"🟡 程序即将开始运行，剩余时间 {random_sleep_min} 分钟")
+            time.sleep(random_sleep_min * 60)
+            self.logger.info(f"🟢 程序已睡眠结束")
+
         self.run(name)
 
     def parse_wx_article(self, article_url):
@@ -605,11 +625,25 @@ class WxReadTaskBase(ABC):
             self._cache[client_name] = client
         return client
 
-    def sleep_fun(self, is_pushed: bool = False, prefix: str = ""):
+    def sleep_fun(self, is_pushed: bool = False, prefix: str = "") -> int:
+        """
+        睡眠随机时间
+        :param is_pushed: 是否推送
+        :param prefix: 阅读文章标签，例如 [1 - 1] 表示第1轮第1篇
+        :return: 返回睡眠的时间
+        """
         t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
         self.logger.info(f"等待检测{prefix}完成, 💤 睡眠{t}秒" if is_pushed else f"💤 {prefix}随机睡眠{t}秒")
         # 睡眠随机时间
         time.sleep(t)
+        return t
+
+    @property
+    def custom_detected_count(self):
+        ret = self.account_config.custom_detected_count
+        if ret is None:
+            ret = self.config_data.custom_detected_count
+        return ret if ret is not None else []
 
     @property
     def wx_pusher_token(self):

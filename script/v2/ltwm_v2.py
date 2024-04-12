@@ -66,12 +66,13 @@ class LTWMV2(WxReadTaskBase):
 
     def __init__(self, config_data: LTWMConfig = load_ltwm_config(), run_read_task: bool = True):
         self.run_read_task = run_read_task
+        self.keep_alive_set = set()
         super().__init__(config_data, logger_name="力天微盟")
 
-    def init_fields(self):
+    def init_fields(self, retry_count=3):
         pass
 
-    def run(self, name):
+    def run(self, name, *args, **kwargs):
         # 配置基本URL
         self.base_client = self._get_client("base", headers=self.build_base_headers(account_config=self.accounts),
                                             base_url=self.CURRENT_API_DOMAIN, verify=False)
@@ -91,41 +92,85 @@ class LTWMV2(WxReadTaskBase):
         else:
             self.logger.info(user_account)
 
+        self.current_balance = user_account.data.balance
+
         if not self.run_read_task:
             self.__request_withdraw()
             return
 
+        # 判断积分是否可以提现
+        if self.current_balance >= 1000:
+            self.logger.war(f"🟡💰 当前积分满足提现要求，开始提现...")
+            self.__request_withdraw()
+
         # 获取用户任务列表
         task_list = self.__request_taskList()
         is_wait = False
+
+        article_reward = 0
         # 检查当前任务还有哪些未完成
         for data in task_list.data:
             if "文章阅读" in data.name:
+
                 if data.taskRemainTime != 0 and data.status == 2:
                     self.logger.info(f"🟢 当前阅读任务已完成，{data.taskRemainTime}分钟后可继续阅读")
+                    # self.wait_queue.put(data.taskRemainTime)
+                    # self.wait_queue.put(name)
+                    # self.keep_alive_set.add(name)
+
                 elif data.taskRemainTime == 0 and data.status == 4:
                     self.logger.info(f"🟢 今日阅读任务已完成!")
                 else:
                     self.logger.war(f"🟡 检测到阅读任务待完成，3秒后开始执行...")
+                    # 提取数字
+                    article_reward = int(re.findall(r"\d+", data.remark)[0])
+                    self.logger.info(f"阅读任务完成后积分将达到：{self.current_balance + article_reward}")
                     time.sleep(3)
                     try:
                         self.__do_read_task()
                     except Exception as e:
                         if "本轮阅读成功完成，奖励发放中" in str(e) or "今天任务已完成" in str(e):
                             is_wait = True
+                            self.current_balance += article_reward
                             continue
                         self.logger.exception(f"🔴 阅读任务异常：{e}")
             if "每日签到" in data.name:
-                self.__do_sign_task()
+                if self.current_balance >= 1000:
+                    self.logger.war(f"🟡💰 当前积分 [{self.current_balance}] 满足提现要求，开始提现...")
+                    self.__request_withdraw(is_wait)
+                if data.status == 4:
+                    self.logger.info(f"🟢 今日签到任务已完成! 如有问题请反馈!")
+                else:
+                    self.__do_sign_task()
 
-        self.__request_withdraw(is_wait=is_wait)
+        if self.current_balance >= 1000:
+            self.logger.war(f"🟡💰 当前积分 [{self.current_balance}] 满足提现要求，开始提现...")
+            self.__request_withdraw(is_wait)
+        else:
+            self.logger.war(f"🟡💰 当前积分 [{self.current_balance}] 不满足提现要求，停止提现")
+
+        # 创建线程保活cookie
+        # self.keep_alive_thread = threading.Thread(target=self.__do_keep_alive)
+        # self.keep_alive_thread.start()
+
+    # def __do_keep_alive(self):
+    #     """
+    #     尝试保活cookie
+    #     :return:
+    #     """
+    #     try:
+    #
+    #         self.logger.info("🟢 cookie保活成功")
+    #     except Exception as e:
+    #         self.logger.warning(f"🔴 cookie保活失败：{e}")
 
     def __do_sign_task(self):
         sign_model = self.__request_sign()
         if sign_model.data:
             self.logger.info(sign_model.data)
+            self.current_balance += sign_model.data.currentIntegral
         else:
-            self.logger.war(f"🟡 {sign_model.message}")
+            self.logger.war(f"{sign_model.message}")
 
     def __do_read_task(self):
         # self.logger.info(task_list)
@@ -209,15 +254,16 @@ class LTWMV2(WxReadTaskBase):
             time.sleep(5)
         # 发起查询请求，查看当前用户积分
         user_model = self.__request_user_account()
-        if user_model.data.balance > 1000:
-            self.logger.war("🟡 满足提现要求，准备提现...")
+        self.current_balance = user_model.data.balance
+        if self.current_balance > 1000:
             withdraw_model = self.__request_do_withdraw()
             if "成功" in withdraw_model.message:
-                self.logger.info(f"🟢 提现成功! \n {withdraw_model}")
+                self.logger.info(f"🟢💰 提现成功! \n {withdraw_model}")
+                self.current_balance -= 1000
                 # 顺便请求下提现详情
                 self.__request_withdraw_detail()
             else:
-                self.logger.error(f"🔴 提现失败, {withdraw_model.message}")
+                self.logger.error(f"🔴💰 提现失败, {withdraw_model.message}")
         else:
             self.logger.war(f"🟡 当前积分{user_model.data.balance}不满足最低提现要求, 脚本结束!")
 
@@ -326,6 +372,14 @@ class LTWMV2(WxReadTaskBase):
 
     def get_entry_url(self) -> str:
         return "http://e9adf325c38844188a2f0aefaabb5e0d.op20skd.toptomo.cn/?fid=12286"
+
+    @property
+    def current_balance(self):
+        return self._cache.get(f"current_balance_{self.ident}")
+
+    @current_balance.setter
+    def current_balance(self, value):
+        self._cache[f"current_balance_{self.ident}"] = value
 
     @property
     def docking_key(self):

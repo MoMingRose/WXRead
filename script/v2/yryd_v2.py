@@ -8,7 +8,7 @@
 import random
 import re
 import time
-from urllib.parse import unquote, unquote_plus
+from urllib.parse import unquote_plus
 
 from httpx import URL
 
@@ -56,12 +56,7 @@ class YRYDV2(WxReadTaskBase):
     WITHDRAWAL_PAGE_COMPILE = re.compile(r"id=['\"](?:u_ali_real_name|u_ali_account).*?value=['\"](.*?)['\"]", re.S)
     # 提款界面的当前余额
     CURRENT_GOLD_COMPILE = re.compile(r"当前余额.*?>(\d+\.?\d*)<", re.S)
-    # 检测有效阅读链接
-    ARTICLE_LINK_VALID_COMPILE = re.compile(
-        r"^https?://mp.weixin.qq.com/s\?__biz=[^&]*&mid=[^&]*&idx=\d*&(?!.*?chksm).*?&scene=\d*#wechat_redirect$")
 
-    # 普通链接Biz提取
-    NORMAL_LINK_BIZ_COMPILE = re.compile(r"__biz=(.*?)&", re.S)
 
     def __init__(self, config_data: YRYDConfig = load_yryd_config(), run_read_task: bool = True):
         self.run_read_task = run_read_task
@@ -73,7 +68,7 @@ class YRYDV2(WxReadTaskBase):
     def get_entry_url(self):
         return EntryUrl.get_yryd_entry_url()
 
-    def init_fields(self):
+    def init_fields(self, retry_count=3):
         # 在主线程中先判断入口链接是否获取成功
         if self.entry_url is None:
             raise Exit("入口链接为空!")
@@ -103,7 +98,7 @@ class YRYDV2(WxReadTaskBase):
         # 再次更新 main_client
         self.parse_base_url(redirect_url, self.main_client)
 
-    def run(self, name):
+    def run(self, name, *args, **kwargs):
         self.base_client.base_url = self.main_client.base_url
         self.read_client.base_url = self.main_client.base_url
         # 判断 cookie中是否有 PHPSESSID
@@ -463,13 +458,6 @@ class YRYDV2(WxReadTaskBase):
     @iu.setter
     def iu(self, value):
         self._cache[f"iu_{self.ident}"] = value
-
-    @property
-    def custom_detected_count(self):
-        ret = self.account_config.custom_detected_count
-        if ret is None:
-            ret = self.config_data.custom_detected_count
-        return ret if ret is not None else []
 
 
 if __name__ == '__main__':

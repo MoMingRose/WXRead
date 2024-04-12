@@ -16,4 +16,4 @@ class FailedPassDetect(Exception):
 
 class WithdrawFailed(CommonException):
     def __init__(self, msg: str):
-        super().__init__(f"提现失败, {msg}", "🟡")
+        super().__init__(f"提现失败, {msg}", "🟡💰")
