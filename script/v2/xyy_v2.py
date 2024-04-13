@@ -48,11 +48,11 @@ class XYYV2(WxReadTaskBase):
     # 当前脚本作者
     CURRENT_SCRIPT_AUTHOR = "MoMingLog"
     # 当前脚本版本
-    CURRENT_SCRIPT_VERSION = "2.0.0"
+    CURRENT_SCRIPT_VERSION = "2.0.1"
     # 当前脚本创建时间
     CURRENT_SCRIPT_CREATED = "2024-04-10"
     # 当前脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04-10"
+    CURRENT_SCRIPT_UPDATED = "2024-04-13"
     # 当前任务名称
     CURRENT_TASK_NAME = "微信阅读任务"
 
@@ -82,9 +82,10 @@ class XYYV2(WxReadTaskBase):
     EXCHANGE_API_COMPILE = re.compile(
         r"提现失败，请稍后再试.*?else.*?ajax.*?url.*?['\"](.*?)['\"].*?success.*?ajax.*?url.*?['\"](.*?)['\"]", re.S)
 
-    def __init__(self, config_data: XYYConfig = load_xyy_config()):
+    def __init__(self, config_data: XYYConfig = load_xyy_config(), run_read_task: bool = True):
 
-        self.detected_biz_data = config_data.biz_data
+        self.detected_biz_data = config_data.biz_data or []
+        self.run_read_task = run_read_task
         super().__init__(config_data, logger_name="小阅阅", load_detected=True)
 
     def init_fields(self, retry_count=3):
@@ -185,7 +186,8 @@ class XYYV2(WxReadTaskBase):
             return
 
         if is_already:
-            self.logger.info("🟢 阅读准备就绪, 开始运行")
+            if self.run_read_task:
+                self.logger.info("🟢 阅读准备就绪, 开始运行")
             self.__already_to_run(homepage_html)
         else:
             self.logger.error("🔴 阅读准备未就绪, 请检查代码!")
@@ -200,11 +202,15 @@ class XYYV2(WxReadTaskBase):
         })
 
         self.parse_base_url(jump_read_url, client=self.read_client)
-        self.parse_jump_read_url(jump_read_url)
+        if self.run_read_task:
+            self.parse_jump_read_url(jump_read_url)
         # 获取阅读加载页源代码
         jump_read_page = self.__request_jump_read_page(jump_read_url)
         if jump_read_page:
             try:
+                # 判断是否需要运行阅读任务
+                if not self.run_read_task:
+                    return
                 self.__start_read(jump_read_url, jump_read_page)
             finally:
                 if homepage_html is not None:
@@ -555,7 +561,8 @@ class XYYV2(WxReadTaskBase):
         if jump_read_model:
             # 获取成功则打印跳转链接
             if isinstance(jump_read_model, WTMPDomain):
-                self.logger.info(jump_read_model)
+                if self.run_read_task:
+                    self.logger.info(jump_read_model)
                 jump_read_url = jump_read_model.data.domain
             else:
                 jump_read_url = jump_read_model.get("data", {}).get("domain")

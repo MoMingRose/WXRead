@@ -32,11 +32,11 @@ class WxPusher:
             "url": link,
         }
         print(f"🚛🚛 文章推送中 ->{link}")
-        url = "http://wxpusher.zjiecode.com/api/send/message"
+        url = "https://wxpusher.zjiecode.com/api/send/message"
         max_retry = 3
         while max_retry > 0:
             try:
-                response = httpx.post(url, json=data, verify=False)
+                response = httpx.post(url, json=data)
                 if response.json().get("code") == 1000:
                     print("> 🟢🟡 检测文章已推送! 请尽快点击!")
                     return True

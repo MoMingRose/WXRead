@@ -5,7 +5,7 @@
 【创建时间】2024-04-06
 【功能描述】
 new Env("鱼儿阅读");
-0 45 7-23 * * * read_mm.py
+0 45 7-23 * * * read_yr.py
 
 统一入口链接：http://h5.pyqvr23agj8.cn/pipa_read?upuid=2068422
 

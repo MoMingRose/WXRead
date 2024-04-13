@@ -62,7 +62,7 @@ class YRYDV2(WxReadTaskBase):
         self.run_read_task = run_read_task
         self.homepage_api = None
         self.main_thread_ident = self.ident
-        self.detected_biz_data = config_data.biz_data
+        self.detected_biz_data = config_data.biz_data or []
         super().__init__(config_data, logger_name="🐟️阅读", load_detected=True)
 
     def get_entry_url(self):
