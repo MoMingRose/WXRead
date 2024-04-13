@@ -57,7 +57,6 @@ class YRYDV2(WxReadTaskBase):
     # 提款界面的当前余额
     CURRENT_GOLD_COMPILE = re.compile(r"当前余额.*?>(\d+\.?\d*)<", re.S)
 
-
     def __init__(self, config_data: YRYDConfig = load_yryd_config(), run_read_task: bool = True):
         self.run_read_task = run_read_task
         self.homepage_api = None
@@ -222,6 +221,9 @@ class YRYDV2(WxReadTaskBase):
                             if last_article_url:
                                 self.new_detected_data.add(last_article_url)
                             self.logger.error("🔴 当前已经被限制，请明天再来")
+                            return
+                        elif "/finish?" in unquote_url:
+                            self.logger.war(f"🟡 本轮阅读任务可能已经完成, 响应链接: {unquote_url}")
                             return
                         # 更新下一次 do_read 链接的 jkey 参数
                         jkey = do_read_model.jkey
