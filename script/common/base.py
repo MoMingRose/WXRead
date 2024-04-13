@@ -248,6 +248,10 @@ class WxReadTaskBase(ABC):
         except:
             article_page = ""
 
+        if article_page is None:
+            self.logger.war(f"🟡 文章页面解析失败，原始文章链接为：{article_url}")
+            article_page = ""
+
         if r := self.ARTICLE_BIZ_COMPILE.search(article_page):
             article_biz = r.group(1)
         else:
