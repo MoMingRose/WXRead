@@ -36,11 +36,11 @@ YRYDConfig: Type[BaseYRYDGlobalConfig] = create_model(
 
 class RspReadUrl(BaseModel):
     """获取阅读链接的响应"""
-    jump: str | None
+    jump: str | None = Field(None, description="阅读链接")
 
 
 class RspDoRead(BaseModel):
     """do_read响应"""
     error_msg: str | None = Field(None, description="错误信息")
-    jkey: str | None
-    url: str | HttpUrl | None
+    jkey: str | None = Field(None, description="阅读key")
+    url: str | HttpUrl | None = Field(None, description="阅读链接")

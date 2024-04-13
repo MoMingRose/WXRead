@@ -307,7 +307,7 @@ class KLYDV2(WxReadTaskBase):
                     continue
             else:
                 # 如果模型数据不为空，那么这里判断上一篇文章的检测结果是否成功
-                if res_model.success_msg and "阅读成功" in res_model.success_msg:
+                if t_c >= 1 and res_model.success_msg and "阅读成功" in res_model.success_msg:
                     if t_c <= 1:
                         s = f'🟢✅️ [{turn_count} - {read_count}] {res_model.success_msg}'
                     else:

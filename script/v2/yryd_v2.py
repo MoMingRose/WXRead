@@ -120,21 +120,24 @@ class YRYDV2(WxReadTaskBase):
         使用ID进行阅读的入口函数
         :return:
         """
-        # 拼接获取阅读链接的URL
-        api_path = f"{APIS.GET_READ_URL}?iu=iuMjA2ODc0OQ2"
-        # read_url_model = self.__request_read_url(api_path)
-        # self.logger.info(read_url_model)
-        self.logger.war("🟡 当前正在通过ID进行阅读操作（ID无法获取用户信息和提现, 只能进行阅读操作）...")
-        self.logger.war("🟡 由于无法获取用户信息，故每次运行默认为第1轮第1篇!")
-        time.sleep(5)
-        self.current_read_count = 0
-        self.__start_read(turn_count=1, read_url_api_path=api_path)
+        self.logger.error("🔴 ID阅读已失效，停止运行")
+        return
+        # # 拼接获取阅读链接的URL
+        # api_path = f"{APIS.GET_READ_URL}?iu=iuMjA2ODc0OQ2"
+        # # read_url_model = self.__request_read_url(api_path)
+        # # self.logger.info(read_url_model)
+        # self.logger.war("🟡 当前正在通过ID进行阅读操作（ID无法获取用户信息和提现, 只能进行阅读操作）...")
+        # self.logger.war("🟡 由于无法获取用户信息，故每次运行默认为第1轮第1篇!")
+        # time.sleep(5)
+        # self.current_read_count = 0
+        # self.__start_read(turn_count=1, read_url_api_path=api_path)
 
     def entry_func_for_cookie(self):
         """
         使用Cookie进行阅读的入口函数
         :return:
         """
+
         # 尝试获取主页源代码
         homepage_html = self.request_for_page(
             self.homepage_api,
@@ -212,7 +215,7 @@ class YRYDV2(WxReadTaskBase):
                                 # 递归调用
                                 # 先随机睡眠1-3秒
                                 time.sleep(random.randint(1, 3))
-                                self.__start_read(_type, retry)
+                                return self.__start_read(_type, retry)
                             else:
                                 # 重试次数已归零则抛出异常
                                 raise PauseReadingTurnNext("重新获取阅读链接次数已用尽!")
@@ -222,7 +225,7 @@ class YRYDV2(WxReadTaskBase):
                                 self.new_detected_data.add(last_article_url)
                             self.logger.error("🔴 当前已经被限制，请明天再来")
                             return
-                        elif "/finish?" in unquote_url:
+                        elif "finish?" in unquote_url:
                             self.logger.war(f"🟡 本轮阅读任务可能已经完成, 响应链接: {unquote_url}")
                             return
                         # 更新下一次 do_read 链接的 jkey 参数
