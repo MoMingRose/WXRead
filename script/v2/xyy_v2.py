@@ -105,7 +105,6 @@ class XYYV2(WxReadTaskBase):
 
     def run(self, name, *args, **kwargs):
         is_already = False
-
         # 从配置中读取 cookie 数据，并配置到 base_client
         self.base_client.cookies = self.cookie_dict
         self.homepage_url = self.request_for_redirect(
@@ -121,14 +120,7 @@ class XYYV2(WxReadTaskBase):
             "获取主页源代码 base_client",
             client=self.base_client
         )
-        while "参数错误" in homepage_html:
-            time.sleep(3)
-            homepage_html = self.request_for_page(
-                self.homepage_url,
-                "获取主页源代码 base_client",
-                client=self.base_client
-            )
-
+        
         if homepage_html:
             if r := self.HOMEPAGE_JS_COMPILE.search(homepage_html):
                 js_code = r.group(1)

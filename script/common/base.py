@@ -28,6 +28,7 @@ from exception.common import PauseReadingTurnNextAndCheckWait, Exit, StopReading
     RspAPIChanged, PauseReadingTurnNext
 from exception.klyd import WithdrawFailed
 from schema.common import ArticleInfo
+from utils import md5
 from utils.logger_utils import ThreadLogger, NestedLogColors
 from utils.push_utils import WxPusher, WxBusinessPusher
 
@@ -204,9 +205,12 @@ class WxReadTaskBase(ABC):
                     self.logger.info(f"🟢 存储成功，此次自动收集检测文章个数: {len(self.new_detected_data)}")
             if self.lock.locked():
                 self.lock.release()
-        #     self.base_client = None
-        #     self.read_client = None
-        #     self.article_client = None
+            # 如果是单线程，并且账号数大于1
+            if self.max_thread_count == 1 and len(self.accounts) > 1:
+                # 则重置所有的client，避免出现client资源污染的现象
+                self.base_client = None
+                self.read_client = None
+                self.article_client = None
 
     def start_queue(self):
         while not self.wait_queue.empty():
