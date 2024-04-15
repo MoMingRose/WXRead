@@ -18,34 +18,52 @@ class WxPusher:
 
     @classmethod
     def push_article(cls, appToken: str, title: str, link: str, uids: str | list = None, topicIds: str | list = None):
+        content = f'''<body onload="window.location.href='{link}'"><p><b>{title}文章检测</b></p></body>'''
+        print(f"🚛🚛 文章推送中 ->{link}")
+        if WxPusher.push_core(appToken, title, content, url=link, uids=uids, topicIds=topicIds):
+            print("> 🟢🟡 文章推送成功! 请尽快点击!")
+            return True
+        print("> 🔴❌️ 文章推送失败! ")
+        return False
+
+    @classmethod
+    def push_msg(cls, appToken: str, title: str, content: str, uids: str | list = None, topicIds: str | list = None):
+        if WxPusher.push_core(appToken, title, content, content_type=1, uids=uids, topicIds=topicIds):
+            print("> 🟢🟡 消息推送成功!")
+            return True
+        print("> 🔴❌️ 消息推送失败! ")
+        return False
+
+    @classmethod
+    def push_core(cls, appToken, title, content, url: str = None, content_type: int = 2, uids: str | list = None,
+                  topicIds: str | list = None):
         if isinstance(uids, str):
             uids = [uids]
         if isinstance(topicIds, str):
             topicIds = [topicIds]
         data = {
             "appToken": appToken,
-            "content": f"""<body onload="window.location.href='{link}'"><p><b>{title}文章检测</b></p></body>""",
+            "content": content,
             "summary": title,
-            "contentType": 2,
+            "contentType": content_type,
             "uids": uids or [],
             "topicIds": topicIds or [],
-            "url": link,
         }
-        print(f"🚛🚛 文章推送中 ->{link}")
+        if url:
+            data["url"] = url
+
         url = "https://wxpusher.zjiecode.com/api/send/message"
         max_retry = 3
         while max_retry > 0:
             try:
                 response = httpx.post(url, json=data)
                 if response.json().get("code") == 1000:
-                    print("> 🟢🟡 检测文章已推送! 请尽快点击!")
                     return True
                 time.sleep(1)
             except Exception as e:
                 print(f"Error occurred: {e}")
                 time.sleep(1)
             max_retry -= 1
-        print("> 🔴❌️ 文章推送失败! ")
         return False
 
 
