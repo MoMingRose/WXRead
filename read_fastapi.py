@@ -63,6 +63,8 @@ class PostData(BaseModel):
     cookie: str | None = Field(None, alias="Cookie", description="Cookie")
     authorization: str | None = Field(None, alias="Authorization", description="Authorization")
     ua: str | None = Field(None, alias="User-Agent", description="User-Agent")
+    host: str | None = Field(None, alias="Host", description="Host")
+    protocol: str | None = Field(None, alias="请求协议", description="Protocol")
 
 
 def push_msg(msg: str, title: str = "MoMingLog-配置更新通知"):
@@ -83,17 +85,39 @@ async def root():
 
 config_dir = os.path.join(os.path.dirname(__file__), "config")
 
+init_data = {
+    1: {
+        "file_path": os.path.join(config_dir, "xyy.yaml"),
+        "modify_name": "小阅阅阅读"
+    },
+    2: {
+        "file_path": os.path.join(config_dir, "ltwm.yaml"),
+        "modify_name": "力天微盟"
+    },
+    3: {
+        "file_path": os.path.join(config_dir, "mmkk.yaml"),
+        "modify_name": "猫猫看看"
+    },
+    4: {
+        "file_path": os.path.join(config_dir, "yryd.yaml"),
+        "modify_name": "鱼儿阅读"
+    },
+    5: {
+        "file_path": os.path.join(config_dir, "klyd.yaml"),
+        "modify_name": "可乐读书"
+    },
+    6: {
+        "file_path": os.path.join(config_dir, "ddz.yaml"),
+        "modify_name": "点点赚"
+    }
+}
+
 
 @app.post("/config/upload")
 async def _(data: PostData):
-    if data.post_type == 1:
-        # 小阅阅
-        file_path = os.path.join(config_dir, "xyy.yaml")
-        modify_name = "小阅阅阅读"
-    elif data.post_type == 2:
-        # 力天微盟
-        file_path = os.path.join(config_dir, "ltwm.yaml")
-        modify_name = "力天微盟"
+    if d := init_data.get(data.post_type):
+        file_path = d.get("file_path")
+        modify_name = d.get("modify_name")
     else:
         push_msg("当前平台暂不支持")
         return {"message": "当前平台暂不支持"}
@@ -147,6 +171,10 @@ async def _(data: PostData):
         user_data[key]["authorization"] = data.authorization
     if data.ua:
         user_data[key]["ua"] = data.ua
+    if data.host:
+        user_data[key]["host"] = data.host
+    if data.protocol:
+        user_data[key]["protocol"] = data.protocol
 
     account_data.update(user_data)
 

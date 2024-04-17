@@ -42,6 +42,11 @@ class RspAPIChanged(CommonException):
         super().__init__(f"{api} 接口返回数据变化，请更新!", "🔴")
 
 
+class APIChanged(CommonException):
+    def __init__(self, api: str):
+        super().__init__(f"{api} 接口变化，请更新!", "🔴")
+
+
 class ExitWithCodeChange(CommonException):
     def __init__(self, prefix=""):
         super().__init__(f"{prefix} 官方貌似更新了源代码，脚本已停止运行!", "🔴")

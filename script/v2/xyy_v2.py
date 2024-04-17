@@ -54,7 +54,7 @@ class XYYV2(WxReadTaskBase):
     # 当前脚本更新时间
     CURRENT_SCRIPT_UPDATED = "2024-04-13"
     # 当前任务名称
-    CURRENT_TASK_NAME = "微信阅读任务"
+    CURRENT_TASK_NAME = "小阅阅"
 
     # 主页关键JS内容提取
     HOMEPAGE_JS_COMPILE = re.compile(r"<script\stype=['\"]text/javascript['\"]>(.*?)</script>", re.S)

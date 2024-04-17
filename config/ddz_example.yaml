@@ -1,0 +1,9 @@
+account_data:
+  # 下方内容完全可以配合我的抓包脚本一键上传
+  账号1:
+    # 【选填】请求协议，如：http、https，不填则默认为http
+    #protocol: ""
+    # 【选填】请求主机地址，不填则默认为28917700289.sx.shuxiangby.cn
+    #host: ""
+    # 【必填】
+    cookie: ""

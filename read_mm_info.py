@@ -21,5 +21,4 @@ new Env("猫猫阅读信息及提现");
 from script.v2.mmkk_v2 import MMKKV2
 
 if __name__ == '__main__':
-    print(f"猫猫正在维护中, 维护完成后，请通知作者更新此脚本!")
-    # MMKKV2(run_read_task=False)
+    MMKKV2(run_read_task=False)

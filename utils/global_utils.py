@@ -6,6 +6,7 @@
 【功能描述】
 """
 import hashlib
+import re
 import time
 from datetime import datetime
 
@@ -39,3 +40,45 @@ def is_date_after_today(date_str):
         return parsed_date > today
     except ValueError:
         return False
+
+
+def hide_dynamic_middle(s, visible_ratio=0.7, mask_char='*'):
+    n = len(s)
+    # 根据可见比例计算可见字符的总数量
+    visible_count = int(n * visible_ratio)
+
+    # 确保至少显示一些字符
+    if visible_count < 2:
+        visible_count = 2
+
+    # 计算每边显示的字符数
+    show_each_side = visible_count // 2
+
+    # 如果可见字符数量是奇数，增加末尾的显示数量
+    if visible_count % 2 != 0:
+        show_end = show_each_side + 1
+    else:
+        show_end = show_each_side
+
+    show_start = show_each_side
+
+    # 构建隐藏后的字符串
+    if n > visible_count:
+        return s[:show_start] + (mask_char * (n - visible_count)) + s[-show_end:]
+    else:
+        return s
+
+
+def extract_urls(text):
+    # 定义一个正则表达式模式来匹配大部分URL
+    url_pattern = r'https?://[\w\-\.]+[\w\-]+[\w\-\./\?\=\&\%]*'
+    # 使用findall方法查找所有匹配的URL
+    urls = re.findall(url_pattern, text)
+    if len(urls) == 1:
+        return urls[0]
+    else:
+        return urls
+
+
+if __name__ == '__main__':
+    print(md5("/index/mob/get_zan_qr.html"))

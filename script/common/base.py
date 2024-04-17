@@ -28,7 +28,6 @@ from exception.common import PauseReadingAndCheckWait, Exit, StopReadingNotExit,
     RspAPIChanged, PauseReadingTurnNext
 from exception.klyd import WithdrawFailed
 from schema.common import ArticleInfo
-from utils import md5
 from utils.logger_utils import ThreadLogger, NestedLogColors
 from utils.push_utils import WxPusher, WxBusinessPusher
 
@@ -100,22 +99,22 @@ class WxReadTaskBase(ABC):
         self.logger.info(NestedLogColors.blue(
             "\n".join([
                 f"{NestedLogColors.black('【脚本信息】', 'blue')}",
-                f"> 作者：{self.CURRENT_SCRIPT_AUTHOR}",
-                f"> 版本号：{self.CURRENT_SCRIPT_VERSION}",
-                f"> 任务名称：{self.CURRENT_TASK_NAME}",
-                f"> 创建时间：{self.CURRENT_SCRIPT_CREATED}",
-                f"> 更新时间：{self.CURRENT_SCRIPT_UPDATED}",
+                f"❄️>> 作者：{self.CURRENT_SCRIPT_AUTHOR}",
+                f"❄️>> 版本号：{self.CURRENT_SCRIPT_VERSION}",
+                f"❄️>> 任务名称：{self.CURRENT_TASK_NAME}",
+                f"❄️>> 创建时间：{self.CURRENT_SCRIPT_CREATED}",
+                f"❄️>> 更新时间：{self.CURRENT_SCRIPT_UPDATED}",
             ])
         ))
 
         self.logger.info(NestedLogColors.blue(
             "\n".join([
                 f"{NestedLogColors.black('【任务配置信息】', 'blue')}",
-                f"> 账号数量：{len(self.accounts)}",
-                f"> 账号队列: {[name for name in self.accounts.keys()]}",
-                f"> 最大线程数：{thread_count}",
-                f"> 配置来源: {self.source}",
-                f"> 入口链接（实时更新）: {self.entry_url}"
+                f"❄️>> 账号数量：{len(self.accounts)}",
+                f"❄️>> 账号队列: {[name for name in self.accounts.keys()]}",
+                f"❄️>> 最大线程数：{thread_count}",
+                f"❄️>> 配置来源: {self.source}",
+                f"❄️>> 入口链接（实时更新）: {self.entry_url}"
             ])
         ))
 
@@ -245,10 +244,10 @@ class WxReadTaskBase(ABC):
 
         self.run(name)
 
-    def parse_wx_article(self, article_url):
+    def parse_wx_article(self, article_url, follow_redirects=True):
         try:
             # 获取文章源代码
-            article_page = self.__request_article_page(article_url)
+            article_page = httpx.get(article_url, headers=self.base_headers, follow_redirects=follow_redirects).text
         except:
             article_page = ""
 

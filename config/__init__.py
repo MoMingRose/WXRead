@@ -12,10 +12,12 @@ from typing import Type
 import yaml
 from pydantic import BaseModel
 
+from schema.ddz import DDZConfig
 from schema.klyd import KLYDConfig
 from schema.ltwm import LTWMConfig
 from schema.mmkk import MMKKConfig
 from schema.xyy import XYYConfig
+from schema.ymz import YMZConfig
 from schema.yryd import YRYDConfig
 from utils import md5
 
@@ -123,6 +125,22 @@ def load_xyy_config() -> XYYConfig:
     :return:
     """
     return __load_config("小阅阅", "xyy", XYYConfig)
+
+
+def load_ddz_config() -> DDZConfig:
+    """
+    加载 点点赚 阅读的配置
+    :return:
+    """
+    return __load_config("点点赚", "ddz", DDZConfig)
+
+
+def load_ymz_config() -> YMZConfig:
+    """
+    加载 有米赚 阅读的配置
+    :return:
+    """
+    return __load_config("有米赚", "ymz", YMZConfig)
 
 
 cache_dir = os.path.join(root_dir, "cache")

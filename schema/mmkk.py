@@ -53,17 +53,19 @@ class WorkInfoData(BaseModel):
 
 
 class WorkInfoRsp(CommonRsp):
-    data: WorkInfoData
+    data: WorkInfoData | None = Field(None, description="今日统计信息")
 
     def __str__(self):
         # return f"【今日统计信息】\n> 阅读文章数: {self.data.dayreads}\n> 获得金币数: {self.data.gold}\n> 当前金币数: {self.data.remain_gold}\n> 当前余额(元): {self.data.remain}"
-        return "\n".join([
-            f"【今日统计信息】",
-            f"❄️>> 阅读文章数: {self.data.dayreads}",
-            f"❄️>> 获得金币数: {self.data.gold}",
-            f"❄️>> 当前金币数: {self.data.remain_gold}",
-            f"❄️>> 当前余额(元): {self.data.remain}"
-        ])
+        if self.data:
+            return "\n".join([
+                f"【今日统计信息】",
+                f"❄️>> 阅读文章数: {self.data.dayreads}",
+                f"❄️>> 获得金币数: {self.data.gold}",
+                f"❄️>> 当前金币数: {self.data.remain_gold}",
+                f"❄️>> 当前余额(元): {self.data.remain}"
+            ])
+        return self.msg
 
     def __repr__(self):
         return self.__str__()
@@ -79,16 +81,17 @@ class UserData(BaseModel):
 
 
 class UserRsp(CommonRsp):
-    data: UserData
+    data: UserData | None = Field(None, description="账号注册信息")
 
     def __str__(self):
         # return f"【账号注册信息】\n> 账号唯一ID: {self.data.userid}\n> 注册时间: {self.data.addtime}\n> 注册日期: {self.data.adddate}"
-        return "\n".join([
-            f"【账号注册信息】",
-            f"❄️>> 账号唯一ID: {self.data.userid}",
-            f"❄️>> 注册时间: {self.data.addtime}",
-            f"❄️>> 注册日期: {self.data.adddate}"
-        ])
+        if self.data:
+            return "\n".join([
+                f"【账号注册信息】",
+                f"❄️>> 账号唯一ID: {self.data.userid}",
+                f"❄️>> 注册时间: {self.data.addtime}",
+                f"❄️>> 注册日期: {self.data.adddate}"
+            ])
 
     def __repr__(self):
         return self.__str__()
@@ -99,7 +102,7 @@ class WTMPDomainData(BaseModel):
 
 
 class WTMPDomainRsp(CommonRsp):
-    data: WTMPDomainData
+    data: WTMPDomainData | None = Field(None, description="阅读二维码链接")
 
     def __str__(self):
         # return f"【阅读二维码链接】\n> 阅读二维码链接: {self.data.domain}"
@@ -120,7 +123,7 @@ class MKWenZhangData(BaseModel):
 
 
 class MKWenZhangRsp(CommonRsp):
-    data: MKWenZhangData
+    data: MKWenZhangData | None = Field(None, description="阅读文章链接")
 
     def __str__(self):
         return f"【文章链接】\n❄️>> {self.data.link}"

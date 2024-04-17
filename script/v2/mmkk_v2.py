@@ -13,7 +13,8 @@ from urllib.parse import quote_plus
 from httpx import URL
 
 from config import load_mmkk_config
-from exception.common import RegExpError, ExitWithCodeChange, PauseReadingAndCheckWait, StopReadingNotExit
+from exception.common import RegExpError, ExitWithCodeChange, PauseReadingAndCheckWait, StopReadingNotExit, \
+    FailedPushTooManyTimes
 from exception.klyd import FailedPassDetect
 from exception.mmkk import StopRun, StopRunWithShowMsg, FailedFetchUK
 from schema.mmkk import MMKKConfig, UserRsp, WorkInfoRsp, WTMPDomainRsp, MKWenZhangRsp, AddGoldsRsp
@@ -44,23 +45,16 @@ class APIS:
 
 
 class MMKKV2(WxReadTaskBase):
-    CURRENT_SCRIPT_VERSION = "2.0.0"
-    CURRENT_TASK_NAME = "可乐阅读"
-
+    # 当前脚本作者
+    CURRENT_SCRIPT_AUTHOR = "MoMingLog"
+    # 当前脚本版本
+    CURRENT_SCRIPT_VERSION = "2.0.1"
     # 当前脚本创建时间
     CURRENT_SCRIPT_CREATED = "2024-03-28"
     # 当前脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04-17"
-    # 当前脚本适配的版本号
-    CURRENT_ARTICLE_JS_VERSION = "10.0"
-    # 当前脚本适配的基本链接
-    ARTICLE_JS_DOMAIN = "https://nsr.zsf2023e458.cloud"
-    # 当前脚本适配的V
-    ARTICLE_JS_V = "6.0"
-    # 当前脚本适配的js文件md5值
-    ARTICLE_JS_CODE_MD5 = "3e29318b3ad6de1481ec03e57fa0e27c"
-    # 固定的加密拼接的字符串
-    ARTICLE_MD5_FIX_STR = "Lj*?Q3#pOviW"
+    CURRENT_SCRIPT_UPDATED = "2024-04-08"
+    # 当前任务名称
+    CURRENT_TASK_NAME = "猫猫看看"
 
     # 主页源代码正则，主要提取内容：用户数据API、文章篇数和金币API、阅读二维码链接API
     HOME_CONTENT_COMPILE = re.compile(
@@ -104,6 +98,7 @@ class MMKKV2(WxReadTaskBase):
         self.logger.debug(f"第一次重定向链接: {self.entry_url}")
         redirect_url = self.entry_url.__str__()
         quote_url = quote_plus(redirect_url)
+        self.logger.info(quote_url)
         if "showmsg" in redirect_url:
             self.logger.war(f"🟡 检测到公告信息, 正在提取...")
             html = self.request_for_page(
@@ -134,9 +129,6 @@ class MMKKV2(WxReadTaskBase):
         # 更新 base_client 的 base_url
         self.parse_base_url(self.entry_url, client=self.base_client)
 
-        if not self.run_read_task:
-            return
-
         if r := self.HOME_CONTENT_COMPILE.findall(homepage_html):
             if len(r) != 3:
                 raise RegExpError(self.HOME_CONTENT_COMPILE)
@@ -159,7 +151,13 @@ class MMKKV2(WxReadTaskBase):
         if workinfo_model:
             self.logger.info(workinfo_model)
             self.current_read_count = workinfo_model.data.dayreads
-            self.start_read()
+            try:
+                if not self.run_read_task:
+                    return
+                self.start_read()
+            finally:
+                # 提现
+                self.__request_withdraw()
         else:
             self.logger.error(f"获取文章篇数和金币失败, 原数据为: {workinfo_model}")
             return
@@ -188,6 +186,93 @@ class MMKKV2(WxReadTaskBase):
         else:
             self.logger.error(f"获取阅读二维码链接失败, 原数据为: {read_load_model}")
             return
+
+    def __request_withdraw(self):
+        """
+        发起提现请求
+        :return:
+        """
+        # 判断是否要进行提现操作
+        if not self.is_withdraw:
+            self.logger.war(f"🟡 提现开关已关闭，已停止提现任务")
+            return
+        # 获取提现页面
+        withdraw_page = self.__request_withdraw_page()
+        if r := self.WITHDRAW_REQ_ID_COMPILE.search(withdraw_page):
+            self.req_id = r.group(1)
+        else:
+            raise RegExpError(self.WITHDRAW_REQ_ID_COMPILE)
+        workInfo: WorkInfoRsp = self.__request_workinfo()
+        gold = int(int(workInfo.data.remain_gold) / 1000) * 1000
+        money = workInfo.data.remain
+        self.logger.info(f"【账户余额统计】\n> 待提现金额：{money}元\n> 待兑换金币: {gold}金币")
+        # 判断是否有金币，或者期待提现金额小于账户余额
+        if gold != 0:
+            # 表示可以提现
+            if new_money := self.__exchange_gold(gold, money):
+                money = new_money
+
+        if money >= self.withdraw:
+            self.__request_withdraw_money()
+        else:
+            self.logger.war(f"账户余额不足 {self.withdraw} 元, 提现停止!")
+
+    def __request_withdraw_money(self):
+        flag = True if self.aliName and self.aliAccount else False
+
+        try:
+            res_json: dict = self.request_for_json(
+                "POST",
+                APIS.GETWITHDRAW,
+                "请求提现 base_client",
+                data={
+                    "signid": self.req_id,
+                    "ua": "2" if flag else "0",
+                    "ptype": "1" if flag else "0",
+                    "paccount": self.aliAccount,
+                    "pname": self.aliName
+                },
+                client=self.base_client
+            )
+            self.logger.info(f"提现结果：{res_json['msg']}")
+        except Exception as e:
+            self.logger.exception(f"提现失败，原因：{e}")
+
+    def __exchange_gold(self, gold, money):
+        """
+        将金币兑换成现金
+        :param gold: 当前金币余额
+        :param money: 当前现金余额
+        :return:
+        """
+        try:
+            exchange_result = self.__request_exchange_gold(gold)
+            if exchange_result.get("errcode") == 0:
+                withdrawBalanceNum = money + float(exchange_result["data"]["money"])
+                self.logger.info(f"✅ 金币兑换为现金成功，开始提现，预计到账 {withdrawBalanceNum} 元")
+                return withdrawBalanceNum
+            else:
+                self.logger.info(f"❌ 金币兑换为现金失败，原因：{exchange_result['msg']}")
+        except Exception as e:
+            self.logger.exception(f"金币兑换现金失败，原因：{e}")
+
+    def __request_exchange_gold(self, gold) -> dict:
+        return self.request_for_json(
+            "POST",
+            APIS.GETGOLD,
+            "请求金币兑换 base_client",
+            data={
+                "request_id": self.req_id,
+                "gold": str(gold)
+            }
+        )
+
+    def __request_withdraw_page(self):
+        return self.request_for_page(
+            APIS.WITHDRAW,
+            "请求提现页面 base_client",
+            client=self.base_client
+        )
 
     def __start_read(self):
         # 计算当前阅读轮数
@@ -250,7 +335,7 @@ class MMKKV2(WxReadTaskBase):
 
                     if "未能获取到用户信息" in gold_info.msg:
                         self.logger.war(gold_info.msg)
-                        return self.prepare_to_read()
+                        return self.start_read()
 
                     if gold_info.data:
                         self.logger.info(f"🟢 {gold_info}")
@@ -339,8 +424,8 @@ class MMKKV2(WxReadTaskBase):
             api = f"{r.group(1)}{{time}}{r.group(2)}{{psign}}{r.group(3)}{{uk}}"
             if "9b604ee5c9fe3618441b7868ce9bb1f1" != md5(api):
                 raise ExitWithCodeChange("增加金币接口变化")
-            APIS.ADD_GOLD_URL = api.replace("{uk}", self.uk) \
-                .replace("psign", str(int(random.random() * 1000) + 1))
+            APIS.ADD_GOLD = api.replace("{uk}", self.uk) \
+                .replace("{psign}", str(int(random.random() * 1000) + 1))
         else:
             raise RegExpError(self.LOADING_PAGE_ADD_GOLD_COMPILE)
 
@@ -415,6 +500,14 @@ class MMKKV2(WxReadTaskBase):
     @uk.setter
     def uk(self, value):
         self._cache[f"uk_{self.ident}"] = value
+
+    @property
+    def req_id(self):
+        return self._cache.get(f"req_id_{self.ident}")
+
+    @req_id.setter
+    def req_id(self, value):
+        self._cache[f"req_id_{self.ident}"] = value
 
 
 if __name__ == '__main__':

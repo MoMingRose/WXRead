@@ -20,8 +20,6 @@ try:
 except ModuleNotFoundError:
     import json
 
-
-
 logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
 
 lock = threading.Lock()
@@ -146,6 +144,8 @@ class Logger:
             msg = str(msg)
         elif isinstance(msg, URL):
             msg = str(msg)
+        elif isinstance(msg, object):
+            msg = msg.__str__()
 
         level_name = logging.getLevelName(level)
         level_color = getattr(LogColors, level_name)
