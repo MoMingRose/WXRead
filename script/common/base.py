@@ -23,7 +23,7 @@ from httpx import URL
 from pydantic import BaseModel, ValidationError
 
 from config import load_detected_data, store_detected_data
-from exception.common import PauseReadingTurnNextAndCheckWait, Exit, StopReadingNotExit, ExitWithCodeChange, \
+from exception.common import PauseReadingAndCheckWait, Exit, StopReadingNotExit, ExitWithCodeChange, \
     CookieExpired, \
     RspAPIChanged, PauseReadingTurnNext
 from exception.klyd import WithdrawFailed
@@ -180,7 +180,7 @@ class WxReadTaskBase(ABC):
         except PauseReadingTurnNext as e:
             self.logger.info(e)
             return
-        except PauseReadingTurnNextAndCheckWait as e:
+        except PauseReadingAndCheckWait as e:
             self.lock.acquire()
             self.logger.info(e)
             if self.is_wait_next_read:

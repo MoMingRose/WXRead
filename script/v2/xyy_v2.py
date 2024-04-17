@@ -14,7 +14,7 @@ from httpx import URL
 from pydantic import BaseModel
 
 from config import load_xyy_config
-from exception.common import RegExpError, FailedPushTooManyTimes, StopReadingNotExit, PauseReadingTurnNextAndCheckWait
+from exception.common import RegExpError, FailedPushTooManyTimes, StopReadingNotExit, PauseReadingAndCheckWait
 from exception.klyd import FailedPassDetect
 from schema.xyy import XYYConfig, WTMPDomain, Gold, ArticleUrl
 from script.common.base import WxReadTaskBase
@@ -394,7 +394,7 @@ class XYYV2(WxReadTaskBase):
                     if "分钟后" in article_url_model.msg:
                         self.logger.info(f"🟢📖 本轮阅读已完成 {article_url_model.msg}")
                         self.__request_jump_read_page(jump_read_url)
-                        raise PauseReadingTurnNextAndCheckWait(article_url_model.msg)
+                        raise PauseReadingAndCheckWait(article_url_model.msg)
                     elif "存在违规操作" in article_url_model.msg:
                         self.logger.error(f"🔴⭕️ {article_url_model.msg}")
                         return

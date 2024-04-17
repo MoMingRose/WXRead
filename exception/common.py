@@ -13,7 +13,7 @@ class CommonException(Exception):
         super().__init__(f"{graphics} {msg}")
 
 
-class PauseReadingTurnNextAndCheckWait(CommonException):
+class PauseReadingAndCheckWait(CommonException):
     def __init__(self, msg: str):
         super().__init__(f"暂停阅读, {msg}", "🟢🔶")
 

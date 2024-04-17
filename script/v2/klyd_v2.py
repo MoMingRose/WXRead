@@ -16,7 +16,7 @@ import httpx
 from httpx import URL
 
 from config import load_klyd_config
-from exception.common import PauseReadingTurnNextAndCheckWait, StopReadingNotExit, CookieExpired, RspAPIChanged, \
+from exception.common import PauseReadingAndCheckWait, StopReadingNotExit, CookieExpired, RspAPIChanged, \
     ExitWithCodeChange, \
     FailedPushTooManyTimes, NoSuchArticle, RegExpError, PauseReadingTurnNext
 from exception.klyd import FailedPassDetect, \
@@ -783,7 +783,7 @@ class KLYDV2(WxReadTaskBase):
         if msg:
             # 如果返回的信息，有以下内容，则提前进行异常抛出，避免出现其他冗余的请求
             if "下一批" in msg:
-                raise PauseReadingTurnNextAndCheckWait(msg)
+                raise PauseReadingAndCheckWait(msg)
             elif "阅读限制" in msg or "任务上限" in msg or "微信限制" in msg:
                 raise StopReadingNotExit(msg)
 

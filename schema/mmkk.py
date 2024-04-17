@@ -56,7 +56,14 @@ class WorkInfoRsp(CommonRsp):
     data: WorkInfoData
 
     def __str__(self):
-        return f"【今日统计信息】\n> 阅读文章数: {self.data.dayreads}\n> 获得金币数: {self.data.gold}\n> 当前金币数: {self.data.remain_gold}\n> 当前余额(元): {self.data.remain}"
+        # return f"【今日统计信息】\n> 阅读文章数: {self.data.dayreads}\n> 获得金币数: {self.data.gold}\n> 当前金币数: {self.data.remain_gold}\n> 当前余额(元): {self.data.remain}"
+        return "\n".join([
+            f"【今日统计信息】",
+            f"❄️>> 阅读文章数: {self.data.dayreads}",
+            f"❄️>> 获得金币数: {self.data.gold}",
+            f"❄️>> 当前金币数: {self.data.remain_gold}",
+            f"❄️>> 当前余额(元): {self.data.remain}"
+        ])
 
     def __repr__(self):
         return self.__str__()
@@ -75,7 +82,13 @@ class UserRsp(CommonRsp):
     data: UserData
 
     def __str__(self):
-        return f"【账号注册信息】\n> 账号唯一ID: {self.data.userid}\n> 注册时间: {self.data.addtime}\n> 注册日期: {self.data.adddate}"
+        # return f"【账号注册信息】\n> 账号唯一ID: {self.data.userid}\n> 注册时间: {self.data.addtime}\n> 注册日期: {self.data.adddate}"
+        return "\n".join([
+            f"【账号注册信息】",
+            f"❄️>> 账号唯一ID: {self.data.userid}",
+            f"❄️>> 注册时间: {self.data.addtime}",
+            f"❄️>> 注册日期: {self.data.adddate}"
+        ])
 
     def __repr__(self):
         return self.__str__()
@@ -89,23 +102,28 @@ class WTMPDomainRsp(CommonRsp):
     data: WTMPDomainData
 
     def __str__(self):
-        return f"【阅读二维码链接】\n> 阅读二维码链接: {self.data.domain}"
+        # return f"【阅读二维码链接】\n> 阅读二维码链接: {self.data.domain}"
+        return "\n".join([
+            f"【阅读二维码链接】",
+            f"❄️>> 阅读二维码链接: {self.data.domain}"
+        ])
 
     def __repr__(self):
         return self.__str__()
 
 
 class MKWenZhangData(BaseModel):
-    link: str = Field(..., description="阅读文章链接")
-    type: str = Field(..., description="类型：目前已知的有read")
-    type2: str = Field("", description="类型: 目前已知的有read，有的响应体中没有这个参数，故设置默认值为空字符串")
+    link: str | None = Field(None, description="阅读文章链接")
+    type: str | None = Field(None, description="类型：目前已知的有read")
+    type2: str | None = Field(None,
+                              description="类型: 目前已知的有read，有的响应体中没有这个参数，故设置默认值为空字符串")
 
 
 class MKWenZhangRsp(CommonRsp):
     data: MKWenZhangData
 
     def __str__(self):
-        return f"【文章链接】\n > {self.data.link}"
+        return f"【文章链接】\n❄️>> {self.data.link}"
 
     def __repr__(self):
         return self.__str__()
@@ -120,10 +138,18 @@ class AddGoldsData(BaseModel):
 
 
 class AddGoldsRsp(CommonRsp):
-    data: AddGoldsData
+    data: AddGoldsData | None = Field(None, description="阅读统计信息")
 
     def __str__(self):
-        return f"【阅读信息统计】\n> 获得金币数: {self.data.gold}\n> 今日阅读文章数: {self.data.day_read}\n> 今日获得金币数: {self.data.day_gold}\n> 当前账户金币数: {self.data.last_gold}\n> 今日剩余阅读文章数: {self.data.remain_read}"
+        # return f"【阅读信息统计】\n> 获得金币数: {self.data.gold}\n> 今日阅读文章数: {self.data.day_read}\n> 今日获得金币数: {self.data.day_gold}\n> 当前账户金币数: {self.data.last_gold}\n> 今日剩余阅读文章数: {self.data.remain_read}"
+        return "\n".join([
+            f"【阅读信息统计】",
+            f"❄️>> 获得金币数: {self.data.gold}",
+            f"❄️>> 今日阅读文章数: {self.data.day_read}",
+            f"❄️>> 今日获得金币数: {self.data.day_gold}",
+            f"❄️>> 当前账户金币数: {self.data.last_gold}",
+            f"❄️>> 今日剩余阅读文章数: {self.data.remain_read}"
+        ])
 
     def __repr__(self):
         return self.__str__()
