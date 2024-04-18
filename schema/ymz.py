@@ -14,13 +14,12 @@ from schema.common import CommonPartConfig, CommonGlobalConfig
 
 class CommonYMZConfig(BaseModel):
     """有米赚全局和局部的相同配置"""
-    pass
+    pwd: int | None = Field(None, description="有米赚提现密码")
 
 
 class YMZAccount(CommonPartConfig, CommonYMZConfig):
     """有米赚（局部配置）"""
     userShowId: int
-    pwd: int
 
 
 class BaseYMZGlobalConfig(CommonGlobalConfig, CommonYMZConfig):
