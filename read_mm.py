@@ -24,7 +24,7 @@ new Env("猫猫看看");
 
 ！！！不熟练的先拿小号测试！！！
 """
-from script.v1.mmkk import MMKK
+from script.v2.mmkk_v2 import MMKKV2
 
 if __name__ == '__main__':
-    MMKK()
+    MMKKV2()
