@@ -116,7 +116,7 @@ class YMZV2(WxReadTaskBase):
         task_list = self.__request_task_list()
 
         if isinstance(task_list, dict):
-            if "被禁用" in task_list.get("message", ""):
+            if any(msg in task_list.get("message", "") for msg in ["禁用", "作弊"]):
                 self.logger.err(f"❌ 当前用户被禁用!")
                 self.logger.error("检测到有账号被封禁，程序即将退出！")
                 sys.exit(0)
@@ -131,7 +131,7 @@ class YMZV2(WxReadTaskBase):
                     self.logger.war(f" 任务 [{task.typeName}] 可能正在维护中，暂停运行! 如有误判，请通知作者更新!")
                     sys.exit(0)
 
-                if task.isShowBtn == 0 :
+                if task.isShowBtn == 0:
                     self.do_read_task(task.typeName)
                 elif task.isShowBtn == 1:
                     if "还剩" in task.btnName:

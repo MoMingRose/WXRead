@@ -42,7 +42,7 @@ class CommonRsp(BaseModel):
 
 
 class RspLoginInfo(BaseModel):
-    accountId: int | None = Field(None, description="账号ID")
+    accountId: int | None = Field(None, description="上级ID")
     city: str | None = Field(None, description="城市")
     country: str | None = Field(None, description="国家")
     createTime: str | None = Field(None, description="创建时间")
@@ -77,7 +77,7 @@ class RspLoginInfo(BaseModel):
     def __str__(self):
         return "\n".join([
             "登录成功，信息如下",
-            f"❄️>> 账号ID: {self.accountId}",
+            f"❄️>> 上级ID: {self.accountId}",
             f"❄️>> 用户ID: {self.userShowId}",
             f"❄️>> 用户昵称: {self.nickname}",
             f"❄️>> 是否有密码: {self.isPwd}",

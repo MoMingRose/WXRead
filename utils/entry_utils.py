@@ -133,7 +133,7 @@ class EntryUrl:
             url = "https://code.sywjmlou.com.cn/"
 
         if invite_url is None:
-            invite_url = "http://o1up.ieazq.shop/haobaobao/auth/c5aab76cbaa0d0c80ec1ade47b3ce520"
+            invite_url = "http://72484f04191524d9e5.atlfuhl.cn/mauth/f5097609e2ff70f696af4c1ed8b3ed4e"
 
         return EntryUrl({
             "name": "猫猫看看",
@@ -158,7 +158,7 @@ class EntryUrl:
     @classmethod
     def get_klrd_entry_url(cls, url: str = None, invite_url: str = None) -> str:
         if url is None:
-            url = "http://m.fbjcoru.cn/entry?upuid=1316875"
+            url = "http://m.fbjcoru.cn/entry?upuid=1622410"
         return EntryUrl({
             "name": "可乐读书",
             "url": url,
@@ -188,10 +188,10 @@ class EntryUrl:
             }, {
                 "name": "猫猫看看",
                 "url": "https://code.sywjmlou.com.cn/",
-                "invite_url": "http://72484f04031828d9e5.kgiuitq.cn/haobaobao/auth/f5097609e2ff70f696af4c1ed8b3ed4e"
+                "invite_url": "http://72484f04191524d9e5.atlfuhl.cn/mauth/f5097609e2ff70f696af4c1ed8b3ed4e"
             }, {
                 "name": "可乐读书",
-                "url": "http://m.fbjcoru.cn/entry?upuid=1316875",
+                "url": "http://m.fbjcoru.cn/entry?upuid=1622410",
                 "reg": r"(入口\d+).*?(http\S+?(?=\s|;|`))",
                 "type": 1
             }, {
@@ -226,4 +226,4 @@ class EntryUrl:
 
 
 if __name__ == "__main__":
-    print(EntryUrl.get_yryd_entry_url())
+    print(EntryUrl.get_all_entry_url())

@@ -217,6 +217,17 @@ class WxBusinessPusher:
                 token = WxBusinessPusher._get_accessToken(corp_id, corp_secret, agent_id)
 
         url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={token}"
+
+        def re_get():
+            if recursion >= 3:
+                raise Exception("> 🔴❌️ 递归次数达到上限，停止重新获取accessToken")
+            else:
+                print("> 🔴🟡 accessToken不合法/已过期！正在尝试重新获取...")
+                token = WxBusinessPusher._get_accessToken(corp_id, corp_secret, agent_id)
+                return WxBusinessPusher.push_article_by_agent(corp_id, corp_secret, agent_id, title, link,
+                                                              situation,
+                                                              tips, token, recursion + 1)
+
         retry = 3
         while retry > 0:
             try:
@@ -227,17 +238,15 @@ class WxBusinessPusher:
                     print("> 🟢🟡 检测文章已推送! 请尽快点击!")
                     return True
                 elif errcode == 40014:
-                    if recursion >= 3:
-                        raise Exception("> 🔴❌️ 递归次数达到上限，停止重新获取accessToken")
-                    else:
-                        print("> 🔴🟡 accessToken不合法/已过期！")
-                        token = WxBusinessPusher._get_accessToken(corp_id, corp_secret, agent_id)
-                        return WxBusinessPusher.push_article_by_agent(corp_id, corp_secret, agent_id, title, link,
-                                                                      situation,
-                                                                      tips, token, recursion + 1)
+                    # 重新获取accessToken并推送
+                    return re_get()
                 elif errcode == 42001:
+                    err_msg = res_json.get('errmsg')
+                    if "expired" in err_msg:
+                        # 重新获取accessToken并推送
+                        return re_get()
                     raise Exception(
-                        f"> 🔴🟡 请求被拒绝，请确认您的IP被放入了白名单（企业可信IP）, 具体响应如下：\n {res_json.get('errmsg')}")
+                        f"> 🔴🟡 请求被拒绝，请确认您的IP被放入了白名单（企业可信IP）, 具体响应如下：\n {err_msg}")
                 else:
                     print(f"出现其他推送失败情况，原数据：{res_json}")
             finally:
@@ -258,12 +267,14 @@ class WxBusinessPusher:
         url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=" + corp_id + "&corpsecret=" + corp_secret
         p = httpx.get(url=url, verify=False)
         access_token = p.json()["access_token"]
+        # expires_in = p.json()["expires_in"] # 没有必要，反正有几率提前失效，直接做好失效后的处理即可
         key = md5(f"{corp_id}_{agent_id}")
         # 缓存token
         storage_cache_config({
             "wxBusiness": {
                 key: {
-                    "accessToken": access_token
+                    "accessToken": access_token,
+                    # "expiresIn": expires_in
                 }
             }
         })

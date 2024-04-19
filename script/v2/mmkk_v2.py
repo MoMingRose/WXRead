@@ -264,7 +264,8 @@ class MMKKV2(WxReadTaskBase):
             data={
                 "request_id": self.req_id,
                 "gold": str(gold)
-            }
+            },
+            client=self.base_client
         )
 
     def __request_withdraw_page(self):
