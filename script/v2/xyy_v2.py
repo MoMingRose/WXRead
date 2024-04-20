@@ -48,11 +48,11 @@ class XYYV2(WxReadTaskBase):
     # 当前脚本作者
     CURRENT_SCRIPT_AUTHOR = "MoMingLog"
     # 当前脚本版本
-    CURRENT_SCRIPT_VERSION = "2.0.1"
+    CURRENT_SCRIPT_VERSION = "2.1.0"
     # 当前脚本创建时间
     CURRENT_SCRIPT_CREATED = "2024-04-10"
     # 当前脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04-13"
+    CURRENT_SCRIPT_UPDATED = "2024-04-20"
     # 当前任务名称
     CURRENT_TASK_NAME = "小阅阅"
 
@@ -382,6 +382,7 @@ class XYYV2(WxReadTaskBase):
             turn_count = self.current_read_count // 30 + 1
             # 计算当前轮数的阅读篇数
             read_count = self.current_read_count % 30 + 1
+            while_count = 0
             # 暂存文章链接数据
             article_map = {}
             while True:
@@ -427,7 +428,7 @@ class XYYV2(WxReadTaskBase):
 
                         article_map[f"{turn_count} - {read_count}"] = article_url
 
-                        is_pushed = self.__check_article_url(article_url, turn_count, read_count)
+                        is_pushed = self.__check_article_url(while_count, article_url, turn_count, read_count)
 
                         if is_pushed:
                             a = article_map.get(f"{turn_count} - {read_count - 1}")
@@ -452,6 +453,7 @@ class XYYV2(WxReadTaskBase):
                         # 更新当前阅读数
                         self.current_read_count += 1
                         read_count += 1
+                        while_count += 1
                     else:
                         self.new_detected_data.add(article_map.get(f"{turn_count} - {read_count - 1}", ""))
                         raise FailedPassDetect(f"🟢⭕️ {article_url_model.msg}")
@@ -461,9 +463,10 @@ class XYYV2(WxReadTaskBase):
         else:
             raise RegExpError(self.JUMP_READ_PAGE_COMPILE)
 
-    def __check_article_url(self, article_url, turn_count, read_count) -> bool:
+    def __check_article_url(self, while_count, article_url, turn_count, read_count) -> bool:
         """
         检查文章链接是否合法，否则直接推送
+        :param while_count: 当前循环的趟数
         :param article_url: 文章链接
         :param turn_count: 当前轮数
         :param read_count: 当前轮数的篇数
@@ -473,8 +476,12 @@ class XYYV2(WxReadTaskBase):
         # 提取链接biz
         biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
         is_need_push = False
+
+        if while_count == 0 and self.first_while_to_push:
+            self.logger.war("🟡 固定第一次循环，走推送通道")
+            is_need_push = True
         # 判断下一篇阅读计数是否达到指定检测数
-        if self.current_read_count + 1 in self.custom_detected_count:
+        elif self.current_read_count + 1 in self.custom_detected_count:
             self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
             is_need_push = True
             # 判断是否是检测文章

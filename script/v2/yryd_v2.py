@@ -35,11 +35,11 @@ class YRYDV2(WxReadTaskBase):
     # 当前脚本作者
     CURRENT_SCRIPT_AUTHOR = "MoMingLog"
     # 当前脚本版本
-    CURRENT_SCRIPT_VERSION = "2.0.1"
+    CURRENT_SCRIPT_VERSION = "2.1.0"
     # 当前脚本创建时间
     CURRENT_SCRIPT_CREATED = "2024-04-03"
     # 当前脚本更新时间
-    CURRENT_SCRIPT_UPDATED = "2024-04-08"
+    CURRENT_SCRIPT_UPDATED = "2024-04-20"
     # 当前任务名称
     CURRENT_TASK_NAME = "鱼儿阅读"
 
@@ -257,6 +257,7 @@ class YRYDV2(WxReadTaskBase):
                     # 接口参数发生变化，抛出异常
                     raise ExitWithCodeChange(APIS.DO_READ)
             else:
+                self.logger.error(f"此消息用来调试，如果报错，请截图给我: {loading_page}")
                 # 正则匹配失败，需要更新了，此时也有可能是源代码更新
                 raise RegExpError(self.LOADING_PAGE_COMPILE)
 

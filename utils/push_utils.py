@@ -164,7 +164,7 @@ class WxBusinessPusher:
 
     @staticmethod
     def push_article_by_agent(
-            corp_id: int,
+            corp_id: str,
             corp_secret: str,
             agent_id: int,
             title: str,

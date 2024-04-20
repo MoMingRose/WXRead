@@ -148,7 +148,7 @@ class KLYDV2(WxReadTaskBase):
             self.logger.war(e)
             self.is_need_withdraw = False
             sys.exit(0)
-        except (FailedPassDetect, WithdrawFailed, NoSuchArticle) as e:
+        except (WithdrawFailed, NoSuchArticle) as e:
             self.logger.war(e)
             self.is_need_withdraw = False
         finally:

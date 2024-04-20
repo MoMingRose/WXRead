@@ -280,6 +280,7 @@ class MMKKV2(WxReadTaskBase):
         turn_count = self.current_read_count // 30 + 1
         # 计算当前轮数的阅读篇数
         read_count = self.current_read_count % 30 + 1
+        while_count = 0
         # 暂存文章链接数据
         article_map = {}
         while True:
@@ -322,7 +323,7 @@ class MMKKV2(WxReadTaskBase):
 
                     article_map[f"{turn_count} - {read_count}"] = article_url
 
-                    is_pushed = self.__check_article_url(article_url, turn_count, read_count)
+                    is_pushed = self.__check_article_url(while_count, article_url, turn_count, read_count)
 
                     if is_pushed:
                         a = article_map.get(f"{turn_count} - {read_count - 1}")
@@ -346,15 +347,17 @@ class MMKKV2(WxReadTaskBase):
                     # 更新当前阅读数
                     self.current_read_count += 1
                     read_count += 1
+                    while_count += 1
                 else:
                     self.new_detected_data.add(article_map.get(f"{turn_count} - {read_count - 1}", ""))
                     raise FailedPassDetect(f"🟢⭕️ {article_url_model.msg}")
             else:
                 raise Exception(f"🔴 获取阅读文章链接失败, 原始响应数据: {article_url_model}")
 
-    def __check_article_url(self, article_url, turn_count, read_count) -> bool:
+    def __check_article_url(self, while_count, article_url, turn_count, read_count) -> bool:
         """
         检查文章链接是否合法，否则直接推送
+        :param while_count: 当前循环的趟数
         :param article_url: 文章链接
         :param turn_count: 当前轮数
         :param read_count: 当前轮数的篇数
@@ -364,8 +367,12 @@ class MMKKV2(WxReadTaskBase):
         # 提取链接biz
         biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
         is_need_push = False
+
+        if while_count == 0 and self.first_while_to_push:
+            self.logger.war("🟡 固定第一次循环，走推送通道")
+            is_need_push = True
         # 判断下一篇阅读计数是否达到指定检测数
-        if self.current_read_count + 1 in self.custom_detected_count:
+        elif self.current_read_count + 1 in self.custom_detected_count:
             self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
             is_need_push = True
             # 判断是否是检测文章
@@ -432,7 +439,7 @@ class MMKKV2(WxReadTaskBase):
 
         if r := self.LOADING_PAGE_GET_ARTILE_COMPILE.search(loading_page_html):
             api = f"{r.group(1)}{{time}}{r.group(2)}{{uk}}"
-            if "b31344cdd874dfd55bf709bd917b4740" != md5(api):
+            if "2fe4402f3b8bfce53d0465b62e0fbac5" != md5(api):
                 raise ExitWithCodeChange("获取文章接口变化")
             APIS.GET_ARTICLE_URL = api.replace("{uk}", self.uk)
         else:

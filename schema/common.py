@@ -17,7 +17,10 @@ class CommonDelayConfig(BaseModel):
 
 class CommonConfig(BaseModel):
     """相同的全局和局部配置（任务和任务账号配置）"""
-    init_colorama: bool = Field(True,                           description="是否初始化colorama，当此项为True青龙面板的颜色渲染会消失，这样或许可以避免不支持颜色显示的青龙面板出现乱码的现象")
+    is_use_ws: bool = Field(None, description="是否使用websocket“回调”")
+    ws_host: str | None = Field(None, description="websocket主机地址")
+    init_colorama: bool = Field(True,
+                                description="是否初始化colorama，当此项为True青龙面板的颜色渲染会消失，这样或许可以避免不支持颜色显示的青龙面板出现乱码的现象")
     is_withdraw: bool | None = Field(None, description="是否进行提现操作")
     withdraw: float = Field(0, description="提现金额（单位: 元），表示只有大于等于这个数才可以提现")
     aliAccount: str | None = Field(None, description="支付宝账号，默认为空")
@@ -26,6 +29,8 @@ class CommonConfig(BaseModel):
     delay: CommonDelayConfig = Field(None, description="阅读延迟时间（单位: 秒）")
     wait_next_read: bool | None = Field(None, description="是否自动等待下批阅读")
     custom_detected_count: list | None = Field(None, description="达到指定阅读篇数走推送通道")
+    first_while_to_push: bool | None = Field(None, description="第一次循环走推送")
+    max_failed_pass_count: int | None = Field(None, description="最大检测未通过账号数量")
     push_types: list | None = Field(None, description="推送通道类型 1: WxPusher 2: WxBusinessPusher")
     # WxPusher
     appToken: str | None = Field(None, description="WxPusher推送通知的appToken")

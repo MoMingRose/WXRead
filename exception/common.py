@@ -32,6 +32,11 @@ class StopReadingNotExit(CommonException):
         super().__init__(f"停止阅读, {msg}", "🟡")
 
 
+class StopReadingAndExit(CommonException):
+    def __init__(self, msg: str, graphics: str = "🔴"):
+        super().__init__(f"停止阅读, {msg}", graphics)
+
+
 class CookieExpired(CommonException):
     def __init__(self):
         super().__init__("Cookie已过期，请更新!", "🔴")

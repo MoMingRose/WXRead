@@ -242,32 +242,64 @@ class ThreadLogger(Logger):
         finally:
             lock.release()
 
+
+
     @property
     def is_log_response(self):
         return self.thread2name.get('is_log_response', False)
 
     def info(self, msg, *args, **kwargs):
-        super().info(msg, *args, prefix=self.name, **kwargs)
+        ident = kwargs.pop("ident", None)
+        if ident is not None:
+            name = self.thread2name.get(ident, "")
+        else:
+            name = self.name
+        super().info(msg, *args, prefix=name, **kwargs)
 
     def debug(self, msg, *args, **kwargs):
-        super().debug(msg, *args, prefix=self.name, **kwargs)
+        ident = kwargs.pop("ident", None)
+        if ident is not None:
+            name = self.thread2name.get(ident, "")
+        else:
+            name = self.name
+        super().debug(msg, *args, prefix=name, **kwargs)
 
     def war(self, msg, *args, **kwargs):
-        super().war(msg, *args, prefix=self.name, **kwargs)
+        ident = kwargs.pop("ident", None)
+        if ident is not None:
+            name = self.thread2name.get(ident, "")
+        else:
+            name = self.name
+        super().war(msg, *args, prefix=name, **kwargs)
 
     def error(self, msg, *args, **kwargs):
-        super().error(msg, *args, prefix=self.name, **kwargs)
+        ident = kwargs.pop("ident", None)
+        if ident is not None:
+            name = self.thread2name.get(ident, "")
+        else:
+            name = self.name
+        super().error(msg, *args, prefix=name, **kwargs)
 
     def cri(self, msg, *args, **kwargs):
-        super().cri(msg, *args, prefix=self.name, **kwargs)
+        ident = kwargs.pop("ident", None)
+        if ident is not None:
+            name = self.thread2name.get(ident, "")
+        else:
+            name = self.name
+        super().cri(msg, *args, prefix=name, **kwargs)
 
     def response(self, prefix: str, response: Response, *args, **kwargs):
         if not self.is_log_response:
             return
+        ident = kwargs.pop("ident", None)
+        if ident is not None:
+            name = self.thread2name.get(ident, "")
+        else:
+            name = self.name
         super().response(
             prefix,
             response,
             *args,
-            prefix_tag=self.name,
+            prefix_tag=name,
             **kwargs
         )

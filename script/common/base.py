@@ -5,6 +5,7 @@
 【创建时间】2024-04-01
 【功能描述】
 """
+import asyncio
 import random
 import re
 import sys
@@ -19,15 +20,17 @@ from typing import Type
 from urllib.parse import ParseResult
 
 import httpx
+import websockets
 from httpx import URL
 from pydantic import BaseModel, ValidationError
 
 from config import load_detected_data, store_detected_data
 from exception.common import PauseReadingAndCheckWait, Exit, StopReadingNotExit, ExitWithCodeChange, \
     CookieExpired, \
-    RspAPIChanged, PauseReadingTurnNext
-from exception.klyd import WithdrawFailed
+    RspAPIChanged, PauseReadingTurnNext, StopReadingAndExit
+from exception.klyd import WithdrawFailed, FailedPassDetect
 from schema.common import ArticleInfo
+from utils import md5, run_async
 from utils.logger_utils import ThreadLogger, NestedLogColors
 from utils.push_utils import WxPusher, WxBusinessPusher
 
@@ -123,16 +126,10 @@ class WxReadTaskBase(ABC):
             self.logger.war("> > 🟡 正在加载本地文章检测数据...")
             self.logger.war("> > 🟡 [Tips] 此数据会在程序运行过程中自动收集检测未通过时的文章链接")
             self.detected_data = load_detected_data()
-            if self.detected_data is not None:
-                self.logger.info(f"> > 🟢 加载成功! 当前已自动收集检测文章个数: {len(self.detected_data)}")
-            else:
-                self.logger.war("> > 🟡 本地暂无检测文章数据")
-            self.logger.info("")
         else:
             self.detected_data = set()
         self.new_detected_data = set()
 
-        self.cacahe_queue = Queue()
         self.wait_queue = Queue()
 
         with ThreadPoolExecutor(max_workers=thread_count, thread_name_prefix="MoMingLog") as executor:
@@ -141,8 +138,10 @@ class WxReadTaskBase(ABC):
                 # 接下来的程序都是在主线程中执行
                 executor.submit(self.start_queue)
 
-        if not self.wait_queue.empty():
-            self.wait_queue.join()
+            if not self.wait_queue.empty():
+                self.wait_queue.join()
+            else:
+                sys.exit(0)
 
     @abstractmethod
     def init_fields(self, retry_count: int = 3):
@@ -164,16 +163,48 @@ class WxReadTaskBase(ABC):
         """返回入口链接"""
         pass
 
+    @property
+    def failed_pass_count(self):
+        return self.failed_pass_count
+
+    @failed_pass_count.setter
+    def failed_pass_count(self, value):
+        self.lock.acquire()
+        self.failed_pass_count = value
+        self.lock.release()
+
+    @property
+    def max_failed_pass_count(self):
+        ret = self.account_config.max_failed_pass_count
+        if ret is None:
+            ret = self.config_data.max_failed_pass_count
+        return ret if ret is not None else 0
+
     def _base_run(self, name, executor):
         # 接下来的程序都是在线程中执行
         # 将用户名存入字典中（用于设置logger的prefix）
         self.thread2name[self.ident] = name
         try:
+            if self.detected_data is not None:
+                self.logger.info(f"> > 🟢 加载检测数据成功! 当前已自动收集检测文章个数: {len(self.detected_data)}")
+            else:
+                self.logger.war("> > 🟡 本地暂无检测文章数据")
+            self.logger.info("")
             self.run(name, executor=executor)
         except (StopReadingNotExit, WithdrawFailed, CookieExpired) as e:
             self.logger.war(e)
             return
-        except (RspAPIChanged, ExitWithCodeChange) as e:
+        except FailedPassDetect as e:
+            self.logger.war(e)
+            self.is_need_withdraw = False
+            if self.max_failed_pass_count == 0:
+                return
+            else:
+                self.failed_pass_count += 1
+            if self.failed_pass_count >= self.max_failed_pass_count:
+                self.logger.error(f"🔴 达到最大检测未通过账号数量，程序即将停止运行")
+                sys.exit(0)
+        except (RspAPIChanged, ExitWithCodeChange, StopReadingAndExit) as e:
             self.logger.error(e)
             sys.exit(0)
         except PauseReadingTurnNext as e:
@@ -291,6 +322,13 @@ class WxReadTaskBase(ABC):
             s = f"{self.CURRENT_TASK_NAME}过检测"
         else:
             s = f"{self.CURRENT_TASK_NAME}-{detecting_count}过检测"
+
+        if self.is_use_ws:
+            client_id, target_id, link = self.generate_detected_url(link)
+            threading.Thread(target=self.sync_ws_endpoint, args=(self.ident, client_id, target_id)).start()
+            status = self.get_connect_status(self.ident)
+            self.wait_for_connect_ws()
+
         return WxPusher.push_article(
             appToken=self.wx_pusher_token,
             title=s,
@@ -311,6 +349,12 @@ class WxReadTaskBase(ABC):
             s = f"{self.CURRENT_TASK_NAME}过检测"
         else:
             s = f"{self.CURRENT_TASK_NAME}-{detecting_count}过检测"
+
+        if self.is_use_ws:
+            client_id, target_id, link = self.generate_detected_url(link)
+            threading.Thread(target=self.sync_ws_endpoint, args=(self.ident, client_id, target_id)).start()
+            self.wait_for_connect_ws()
+
         if self.wx_business_use_robot:
             return WxBusinessPusher.push_article_by_robot(
                 self.wx_business_webhook_url,
@@ -327,6 +371,21 @@ class WxReadTaskBase(ABC):
                 link=link,
                 **kwargs
             )
+
+    def wait_for_connect_ws(self):
+        status = self.get_connect_status(self.ident)
+        while True:
+            if status is None:
+                self.logger.war("🟡 正在等待接入回调服务(接入成功后再推送文章)...")
+                status = self.get_connect_status(self.ident)
+                time.sleep(1)
+                continue
+            else:
+                if status:
+                    self.logger.info("🟢✅️ 回调服务接入成功!正在准备推送文章... ")
+                    break
+                else:
+                    raise StopReadingAndExit(f"服务对接失败，请检查网络或此服务地址 {self.ws_host} 已失效", )
 
     def __request_article_page(self, article_url: str):
         return self.request_for_page(article_url, "请求文章信息 article_client", client=self.article_client)
@@ -474,6 +533,60 @@ class WxReadTaskBase(ABC):
                 client.close()
             if self.lock.locked():
                 self.lock.release()
+
+    async def websocket_endpoint(self, ident, client_id: str, target_id: str):
+        url = f"ws://{self.ws_host}/mmlg/callback/ct/ws/{target_id}"
+        success_msg = f"{client_id}:检测文章访问状态已上传记录成功! 正在准备跳转链接..."
+        try:
+            async with websockets.connect(url, timeout=5) as ws:
+                self.set_connect_status(ident, True)
+                self.logger.info(f"🟢 服务对接成功，正在准备等待访问结果...", ident=ident)
+                while True:
+                    try:
+                        # 使用await确保正确执行recv
+                        msg = await asyncio.wait_for(ws.recv(), timeout=5)
+                        self.logger.info(f"🟢 接收到客户端消息：{msg}", ident=ident)
+                        if msg == "true":
+                            self.set_access_result(ident, True)
+                            await ws.send(success_msg)
+                            break
+                    except asyncio.TimeoutError:
+                        self.logger.war("⚠️ 接收消息超时，正在重试...", ident=ident)
+        except Exception:
+            self.set_connect_status(ident, False)
+
+    def sync_ws_endpoint(self, ident, client_id: str, target_id: str):
+        try:
+            run_async(self.websocket_endpoint, ident, client_id, target_id)
+        except StopReadingAndExit as e:
+            raise e
+
+    def generate_detected_url(self, article_url):
+        client_id = md5(f"client_id_{self.ident}_{self.logger.name}_{time.time()}_{random.randint(1000, 9999)}")
+        target_id = md5(f"target_id_{self.ident}_{self.logger.name}_{time.time()}_{random.randint(1000, 9999)}")
+        return client_id, target_id, f"http://{self.ws_host}/mmlg/callback/ct/get-link?client_id={client_id}&target_id={target_id}&redirect={article_url}"
+
+    def get_access_result(self, ident) -> bool:
+        return self._cache.get(f"is_detected_article_{ident}", False)
+
+    def set_access_result(self, ident, value: bool):
+        self._cache[f"is_detected_article_{ident}"] = value
+
+    def get_connect_status(self, ident) -> bool | None:
+        return self._cache.get(f"is_connected_{ident}", None)
+
+    def set_connect_status(self, ident, value: bool):
+        self._cache[f"is_connected_{ident}"] = value
+
+    @property
+    def is_use_ws(self):
+        ret = self.config_data.is_use_ws
+        return ret if ret is not None else False
+
+    @property
+    def ws_host(self):
+        ret = self.config_data.ws_host
+        return ret if ret is not None else "127.0.0.1:6699"
 
     @property
     def wx_business_is_push_markdown(self):
@@ -641,8 +754,24 @@ class WxReadTaskBase(ABC):
         """
         t = self.push_delay[0] if is_pushed else random.randint(self.read_delay[0], self.read_delay[1])
         self.logger.info(f"等待检测{prefix}完成, 💤 睡眠{t}秒" if is_pushed else f"💤 {prefix}随机睡眠{t}秒")
-        # 睡眠随机时间
-        time.sleep(t)
+        tmp = t
+        if self.is_use_ws and is_pushed:
+            # 睡眠随机时间
+            while True:
+                if tmp == 0:
+                    raise PauseReadingTurnNext("此用户未访问检测文章! ")
+                if self.get_access_result(self.ident):
+                    self.logger.info(f'🟢✅ ️接收到访问通知!剩余睡眠时间: {tmp}')
+                    if tmp < 6:
+                        self.logger.war(f'🟡 由于剩余睡眠时间过少，故重置睡眠时间 10 秒')
+                        tmp = 10
+                    self.set_access_result(self.ident, False)
+                    break
+                else:
+                    self.logger.war(f'🟡 用户还未访问检测文章，剩余时间{tmp}，请尽快访问!')
+                time.sleep(1)
+                tmp -= 1
+        time.sleep(tmp)
         return t
 
     @property
@@ -752,6 +881,13 @@ class WxReadTaskBase(ABC):
     @property
     def is_log_response(self):
         ret = self.config_data.is_log_response
+        return ret if ret is not None else False
+
+    @property
+    def first_while_to_push(self):
+        ret = self.account_config.first_while_to_push
+        if ret is None:
+            ret = self.config_data.first_while_to_push
         return ret if ret is not None else False
 
     def build_base_headers(self, account_config=None):

@@ -5,6 +5,7 @@
 【创建时间】2024-03-28
 【功能描述】
 """
+import asyncio
 import hashlib
 import re
 import time
@@ -78,6 +79,36 @@ def extract_urls(text):
         return urls[0]
     else:
         return urls
+
+
+def run_async(async_func, *args, **kwargs):
+    """
+    一个通用函数，用于在同步代码中运行异步函数。
+
+    :param async_func: 异步函数
+    :param args: 传递给异步函数的位置参数
+    :param kwargs: 传递给异步函数的关键字参数
+    :return: 异步函数的返回值
+    """
+    # 尝试获取当前线程的事件循环，如果没有则创建新的事件循环
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError("Event loop is closed")
+    except RuntimeError as e:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    result = None
+    # 在事件循环中运行异步任务
+    try:
+        result = loop.run_until_complete(async_func(*args, **kwargs))
+        # 如果是新创建的事件循环，运行完毕后应该关闭
+        if loop != asyncio.get_running_loop():
+            loop.close()
+    except RuntimeError:
+        pass
+
+    return result
 
 
 if __name__ == '__main__':
