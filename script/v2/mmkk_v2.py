@@ -112,14 +112,14 @@ class MMKKV2(WxReadTaskBase):
         # 设置cookie
         self.base_client.cookies = self.cookie_dict
         # 开始第二次重定向，获取主页链接
-        self.entry_url: URL = self.request_for_redirect(
+        homepage_url: URL = self.request_for_redirect(
             self.entry_url,
             "第二次重定向 base_client",
             client=self.base_client
         )
         # 请求首页源代码
         homepage_html = self.request_for_page(
-            self.entry_url,
+            homepage_url,
             "获取主页源代码 base_client",
             client=self.base_client
         )
@@ -127,7 +127,7 @@ class MMKKV2(WxReadTaskBase):
             raise StopRun("账号已被封")
 
         # 更新 base_client 的 base_url
-        self.parse_base_url(self.entry_url, client=self.base_client)
+        self.parse_base_url(homepage_url, client=self.base_client)
 
         if r := self.HOME_CONTENT_COMPILE.findall(homepage_html):
             if len(r) != 3:
@@ -143,7 +143,7 @@ class MMKKV2(WxReadTaskBase):
         # 随机睡眠2-4秒
         time.sleep(random.randint(2, 4))
         # 获取用户信息, 并打印
-        self.logger.info(self.__request_user())
+        self.logger.info(self.__request_user(homepage_url))
         # 随机睡眠2-4秒
         time.sleep(random.randint(1, 2))
         # 获取文章篇数和金币
@@ -473,7 +473,7 @@ class MMKKV2(WxReadTaskBase):
             model=WorkInfoRsp,
         )
 
-    def __request_user(self) -> UserRsp | dict:
+    def __request_user(self, homepage_url) -> UserRsp | dict:
         return self.request_for_json(
             "GET",
             APIS.USER,
@@ -481,7 +481,7 @@ class MMKKV2(WxReadTaskBase):
             client=self.base_client,
             model=UserRsp,
             update_headers={
-                "Referer": self.entry_url.__str__(),
+                "Referer": homepage_url.__str__(),
                 "X-Requested-With": "XMLHttpRequest",
                 "Accept": "application/json, text/javascript, */*; q=0.01"
             }

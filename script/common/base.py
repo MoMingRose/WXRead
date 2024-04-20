@@ -17,7 +17,7 @@ from http.cookies import SimpleCookie
 from json import JSONDecodeError
 from queue import Queue
 from typing import Type
-from urllib.parse import ParseResult
+from urllib.parse import ParseResult, quote_plus
 
 import httpx
 import websockets
@@ -186,7 +186,7 @@ class WxReadTaskBase(ABC):
         self.thread2name[self.ident] = name
         try:
             if self.detected_data is not None:
-                self.logger.info(f"> > 🟢 加载检测数据成功! 当前已自动收集检测文章个数: {len(self.detected_data)}")
+                self.logger.info(f"> > 🟢 加载检测数据成功! 当前已自动收集检测文章个数: {len(self.detected_data) + len(self.new_detected_data)}")
             else:
                 self.logger.war("> > 🟡 本地暂无检测文章数据")
             self.logger.info("")
@@ -324,6 +324,8 @@ class WxReadTaskBase(ABC):
             s = f"{self.CURRENT_TASK_NAME}-{detecting_count}过检测"
 
         if self.is_use_ws:
+            # 将原始link进行编码
+            link = quote_plus(link)
             client_id, target_id, link = self.generate_detected_url(link)
             threading.Thread(target=self.sync_ws_endpoint, args=(self.ident, client_id, target_id)).start()
             status = self.get_connect_status(self.ident)
@@ -351,6 +353,8 @@ class WxReadTaskBase(ABC):
             s = f"{self.CURRENT_TASK_NAME}-{detecting_count}过检测"
 
         if self.is_use_ws:
+            # 将原始link进行编码
+            link = quote_plus(link)
             client_id, target_id, link = self.generate_detected_url(link)
             threading.Thread(target=self.sync_ws_endpoint, args=(self.ident, client_id, target_id)).start()
             self.wait_for_connect_ws()
@@ -461,6 +465,7 @@ class WxReadTaskBase(ABC):
             ret_types = [ret_types]
         flag = False
         if url is None:
+            self.logger.error("检测到要请求的链接为空，已自动结束请求并退成程序!")
             raise Exit()
 
         response = None
@@ -538,14 +543,14 @@ class WxReadTaskBase(ABC):
         url = f"ws://{self.ws_host}/mmlg/callback/ct/ws/{target_id}"
         success_msg = f"{client_id}:检测文章访问状态已上传记录成功! 正在准备跳转链接..."
         try:
-            async with websockets.connect(url, timeout=5) as ws:
+            async with websockets.connect(url, timeout=10) as ws:
                 self.set_connect_status(ident, True)
                 self.logger.info(f"🟢 服务对接成功，正在准备等待访问结果...", ident=ident)
                 while True:
                     try:
                         # 使用await确保正确执行recv
                         msg = await asyncio.wait_for(ws.recv(), timeout=5)
-                        self.logger.info(f"🟢 接收到客户端消息：{msg}", ident=ident)
+                        self.logger.info(f"🟢 此消息用来调试：接收到客户端消息：{msg}", ident=ident)
                         if msg == "true":
                             self.set_access_result(ident, True)
                             await ws.send(success_msg)
