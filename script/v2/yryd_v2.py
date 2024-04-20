@@ -188,6 +188,7 @@ class YRYDV2(WxReadTaskBase):
         jkey = None
         use_user_cookie = False
         article_map = {}
+        while_count = 0
         while True:
             # 请求加载页源代码
             loading_page = self.__request_loading_page(full_read_url, use_user_cookie)
@@ -244,10 +245,11 @@ class YRYDV2(WxReadTaskBase):
 
                         article_map[f"{turn_count} - {read_count}"] = article_url
 
-                        self.__check_article_url(article_url, turn_count, read_count)
+                        self.__check_article_url(while_count, article_url, turn_count, read_count)
                         # 无法判断是否阅读成功，股这里直接自增
                         read_count += 1
                         self.current_read_count += 1
+                        while_count += 1
                     else:
                         # 如果转换失败，那么此时说明返回的数据是字典类型
                         # 这里目前暂不打算适配
@@ -261,13 +263,17 @@ class YRYDV2(WxReadTaskBase):
                 # 正则匹配失败，需要更新了，此时也有可能是源代码更新
                 raise RegExpError(self.LOADING_PAGE_COMPILE)
 
-    def __check_article_url(self, article_url, turn_count, read_count):
+    def __check_article_url(self, while_count, article_url, turn_count, read_count):
         is_pushed = False
         # 提取链接biz
         biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
         is_need_push = False
+
+        if while_count == 0 and self.first_while_to_push:
+            self.logger.war("🟡 固定第一次循环，走推送通道")
+            is_need_push = True
         # 判断下一篇阅读计数是否达到指定检测数
-        if self.current_read_count + 1 in self.custom_detected_count:
+        elif self.current_read_count + 1 in self.custom_detected_count:
             self.logger.war(f"🟡 达到自定义计数数量，走推送通道!")
             is_need_push = True
             # 判断是否是检测文章

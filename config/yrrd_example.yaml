@@ -103,7 +103,9 @@ is_withdraw: true
 #  - 101
 #  - 151
 
-
+# 【选填】第一次循环是否走推送
+# 功能描述：不管当前具体是第几轮第几篇，只要是刚运行程序，那么第一篇文章是否走推送
+first_while_to_push: False
 
 # 【必填】
 account_data:

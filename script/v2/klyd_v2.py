@@ -392,8 +392,12 @@ class KLYDV2(WxReadTaskBase):
 
             # 提取链接biz
             biz_match = self.NORMAL_LINK_BIZ_COMPILE.search(article_url)
+
+            if t_c == 0 and self.first_while_to_push:
+                self.logger.war("🟡 固定第一次循环，走推送通道")
+                is_need_push = True
             # 判断下一篇阅读计数是否达到指定检测数
-            if self.current_read_count + 1 in self.custom_detected_count:
+            elif self.current_read_count + 1 in self.custom_detected_count:
                 self.logger.war(f"🟡📕 达到自定义计数数量，走推送通道!")
                 is_need_push = True
             # 判断是否是检测文章
