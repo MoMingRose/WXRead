@@ -120,8 +120,8 @@ class WxReadTaskBase(ABC):
                 f"❄️>> 入口链接（实时更新）: {self.entry_url}"
             ])
         ))
-
-        if kwargs.pop("load_detected", False):
+        self.load_detected = kwargs.pop("load_detected", False)
+        if self.load_detected:
             self.logger.info("")
             self.logger.war("> > 🟡 正在加载本地文章检测数据...")
             self.logger.war("> > 🟡 [Tips] 此数据会在程序运行过程中自动收集检测未通过时的文章链接")
@@ -185,10 +185,11 @@ class WxReadTaskBase(ABC):
         # 将用户名存入字典中（用于设置logger的prefix）
         self.thread2name[self.ident] = name
         try:
-            if self.detected_data is not None:
-                self.logger.info(f"> > 🟢 加载检测数据成功! 当前已自动收集检测文章个数: {len(self.detected_data) + len(self.new_detected_data)}")
-            else:
-                self.logger.war("> > 🟡 本地暂无检测文章数据")
+            if self.load_detected:
+                if self.detected_data is not None:
+                    self.logger.info(f"🟢 加载检测数据成功! 当前已自动收集检测文章个数: {len(self.detected_data) + len(self.new_detected_data)}")
+                else:
+                    self.logger.war("🟡 本地暂无检测文章数据")
             self.logger.info("")
             self.run(name, executor=executor)
         except (StopReadingNotExit, WithdrawFailed, CookieExpired) as e:

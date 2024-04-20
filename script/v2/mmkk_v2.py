@@ -69,7 +69,7 @@ class MMKKV2(WxReadTaskBase):
         r"(?:金币接口)?function\sgetGold.*?ajax.*?url:.*?['\"](.*?)['\"].*?['\"](.*?)['\"].*?['\"](.*?)['\"].*?,", re.S)
     # 阅读加载页：提取获取文章API
     LOADING_PAGE_GET_ARTILE_COMPILE = re.compile(
-        r"(?:文章接口)?function\sread_jump_read.*?ajax.*?url:.*?['\"](.*?)['\"].*?['\"](.*?)['\"].*?,", re.S)
+        r"(?:文章接口)?function\sread_jump_read.*?ajax.*?url:(.*?),", re.S)
 
     # 获取 request_id
     WITHDRAW_REQ_ID_COMPILE = re.compile(r"request_id\s*=\s*['\"](.*?)['\"]")
@@ -83,7 +83,7 @@ class MMKKV2(WxReadTaskBase):
     def __init__(self, config_data: MMKKConfig = load_mmkk_config(), run_read_task: bool = True):
         self.run_read_task = run_read_task
         self.detected_biz_data = config_data.biz_data or []
-        super().__init__(config_data, logger_name="😸阅读")
+        super().__init__(config_data, logger_name="😸阅读", load_detected=True)
 
     def get_entry_url(self):
         return EntryUrl.get_mmkk_entry_url()
@@ -438,10 +438,31 @@ class MMKKV2(WxReadTaskBase):
             raise RegExpError(self.LOADING_PAGE_ADD_GOLD_COMPILE)
 
         if r := self.LOADING_PAGE_GET_ARTILE_COMPILE.search(loading_page_html):
-            api = f"{r.group(1)}{{time}}{r.group(2)}{{uk}}"
-            if "2fe4402f3b8bfce53d0465b62e0fbac5" != md5(api):
-                raise ExitWithCodeChange("获取文章接口变化")
-            APIS.GET_ARTICLE_URL = api.replace("{uk}", self.uk)
+            url = r.group(1).strip().replace(" ", "")
+            if "`" not in url:
+                addend_list = url.split("+")
+                filter_addend = [addend for addend in addend_list if not any(b in addend for b in ["'", "\""])]
+                if len(filter_addend) == 3:
+                    api_part_list = [part for part in addend_list if part not in filter_addend]
+                    count = 0
+                    for index, api_part in enumerate(api_part_list):
+                        if "time=\"" in api_part:
+                            api_part_list[index] = api_part.replace("\"", "").replace("time=", "time={time}")
+                            count += 1
+                        elif "uk=\"" in api_part:
+                            api_part_list[index] = api_part.replace("\"", "").replace("uk=", "uk={uk}")
+                            count += 1
+                    if count != 2:
+                        raise ExitWithCodeChange("文章接口变化")
+
+                    api = "".join(api_part_list)
+                    APIS.GET_ARTICLE_URL = api.replace("{uk}", self.uk)
+                else:
+                    raise ExitWithCodeChange("文章接口变化")
+            else:
+                # 其他情况等出现了再完善
+                raise ExitWithCodeChange("文章接口变化")
+
         else:
             raise RegExpError(self.LOADING_PAGE_GET_ARTILE_COMPILE)
 
