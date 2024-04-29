@@ -190,7 +190,7 @@ class WxReadTaskBase(ABC):
                     self.logger.info(f"🟢 加载检测数据成功! 当前已自动收集检测文章个数: {len(self.detected_data) + len(self.new_detected_data)}")
                 else:
                     self.logger.war("🟡 本地暂无检测文章数据")
-            self.logger.info("")
+            print("")
             self.run(name, executor=executor)
         except (StopReadingNotExit, WithdrawFailed, CookieExpired) as e:
             self.logger.war(e)

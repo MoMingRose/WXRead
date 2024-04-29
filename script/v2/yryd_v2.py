@@ -79,21 +79,22 @@ class YRYDV2(WxReadTaskBase):
             "请求入口链接 main_client",
             client=self.main_client
         )
-        self.logger.debug(f"第一次重定向链接: {redirect_url}")
-        # 对重定向后的链接发起请求，获取二次重定向链接
-        redirect_url = self.request_for_redirect(
-            redirect_url,
-            "二次重定向 main_client",
-            client=self.main_client
-        )
-        self.logger.debug(f"二次重定向链接为：{redirect_url}")
-        # 开始提取二次重定向链接中的参数值
-        # 先转成 URL 类型
-        url_params = URL(redirect_url).params
-        # 提取链接中的重定向链接
-        redirect_url = URL(url_params.get("redirect_uri", ""))
-        # 储存一下注意API
-        self.homepage_api = redirect_url.params.get("redirect")
+        # self.logger.debug(f"第一次重定向链接: {redirect_url}")
+        # # 对重定向后的链接发起请求，获取二次重定向链接
+        # redirect_url = self.request_for_redirect(
+        #     redirect_url,
+        #     "二次重定向 main_client",
+        #     client=self.main_client
+        # )
+        # self.logger.debug(f"二次重定向链接为：{redirect_url}")
+        # # 开始提取二次重定向链接中的参数值
+        # # 先转成 URL 类型
+        # url_params = URL(redirect_url).params
+        # # 提取链接中的重定向链接
+        # redirect_url = URL(url_params.get("redirect", ""))
+        # 储存一下主页API
+        # self.homepage_api = redirect_url.params.get("redirect")
+        self.homepage_api = redirect_url
         # 再次更新 main_client
         self.parse_base_url(redirect_url, self.main_client)
 

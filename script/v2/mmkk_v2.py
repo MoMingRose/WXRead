@@ -454,7 +454,6 @@ class MMKKV2(WxReadTaskBase):
                             count += 1
                     if count != 2:
                         raise ExitWithCodeChange("文章接口变化")
-
                     api = "".join(api_part_list)
                     APIS.GET_ARTICLE_URL = api.replace("{uk}", self.uk)
                 else:

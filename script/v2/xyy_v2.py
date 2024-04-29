@@ -107,16 +107,16 @@ class XYYV2(WxReadTaskBase):
         is_already = False
         # 从配置中读取 cookie 数据，并配置到 base_client
         self.base_client.cookies = self.cookie_dict
-        self.homepage_url = self.request_for_redirect(
+        homepage_url = self.request_for_redirect(
             self.entry_url,
             "入口页面2次重定向 base_client",
             client=self.base_client
         )
-        self.logger.debug(f"获取主页入口链接： {self.homepage_url}")
+        self.logger.debug(f"获取主页入口链接： {homepage_url}")
 
         # 获取主页源代码
         homepage_html = self.request_for_page(
-            self.homepage_url,
+            homepage_url,
             "获取主页源代码 base_client",
             client=self.base_client
         )
@@ -124,7 +124,6 @@ class XYYV2(WxReadTaskBase):
         if homepage_html:
             if r := self.HOMEPAGE_JS_COMPILE.search(homepage_html):
                 js_code = r.group(1)
-
                 if r := self.JS_CODE_COMPILE.search(js_code):
                     # 获取 domain 目前：http://1712719612.xxl860.top/yunonline/v1/
                     self.domain = r.group(1)
@@ -162,7 +161,7 @@ class XYYV2(WxReadTaskBase):
                     APIS.GOLD_INFO = f"{APIS.COMMON}{api_gold}"
 
                     # 获取并打印金币数据
-                    gold_info = self.__request_gold_info()
+                    gold_info = self.__request_gold_info(homepage_url)
                     self.logger.info(gold_info)
 
                     # 设置当前阅读数量
@@ -592,7 +591,7 @@ class XYYV2(WxReadTaskBase):
 
         )
 
-    def __request_gold_info(self) -> Gold | dict:
+    def __request_gold_info(self, homepage_url) -> Gold | dict:
         """请求获取金币情况（阅读收入）"""
         return self._request_for_json(
             "GET",
@@ -600,7 +599,7 @@ class XYYV2(WxReadTaskBase):
             "获取金币数据",
             client=self.base_client,
             update_headers={
-                "Referer": self.homepage_url.__str__()
+                "Referer": homepage_url.__str__()
             },
             model=Gold
         )
@@ -626,14 +625,6 @@ class XYYV2(WxReadTaskBase):
 
     def get_entry_url(self) -> str:
         return EntryUrl.get_xyy_entry_url()
-
-    @property
-    def homepage_url(self):
-        return self._cache.get(f"homepage_url_{self.ident}")
-
-    @homepage_url.setter
-    def homepage_url(self, value):
-        self._cache[f"homepage_url_{self.ident}"] = value
 
     @property
     def domain(self):
