@@ -13,6 +13,7 @@ import yaml
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+from config import sniff_dir
 from utils.push_utils import WxPusher
 
 sniff_data_router = APIRouter(tags=["配置自动化（处理上传的抓包数据）"])
@@ -65,7 +66,7 @@ def push_msg(msg: str, title: str = "MoMingLog-配置更新通知"):
     )
 
 
-config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config")
+config_dir = sniff_dir
 
 init_data = {
     1: {
@@ -95,7 +96,7 @@ init_data = {
 }
 
 
-@sniff_data_router.post("/")
+@sniff_data_router.post("")
 async def _(data: PostData):
     if d := init_data.get(data.post_type):
         file_path = d.get("file_path")
@@ -106,8 +107,9 @@ async def _(data: PostData):
 
     # 判断配置文件是否存在
     if not os.path.exists(file_path):
-        push_msg(f"配置文件 {file_path}  不存在")
-        return {"message": "配置文件不存在"}
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as fp:
+            fp.write("account_data:\n")
 
     # 先加载对应的yaml文件
     with open(file_path, "r", encoding="utf-8") as fp:
@@ -120,6 +122,9 @@ async def _(data: PostData):
 
     # 获取文件中的account_data数据
     account_data: Dict[str, Dict] = config_data.get("account_data", {})
+
+    if account_data is None:
+        account_data = {}
 
     user_data: Dict[str, Dict] = {}
     if data.user_name:
@@ -163,6 +168,8 @@ async def _(data: PostData):
     all_account_data = json.dumps(account_data, ensure_ascii=False, indent=4)
 
     update_content = json.dumps(user_data, ensure_ascii=False, indent=4)
+
+    config_data["account_data"] = account_data
 
     with open(file_path, "w", encoding="utf-8") as fp:
         try:

@@ -23,6 +23,8 @@ from utils import md5
 
 root_dir = os.path.dirname(__file__)
 
+sniff_dir = os.path.join(root_dir, "sniff_config")
+
 
 def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwargs) -> any:
     """
@@ -31,7 +33,10 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
     :return:
     """
     common_path = os.path.join(root_dir, "common.yaml")
-    path = os.path.join(root_dir, f"{filename}.yaml")
+
+    sniff_file_path = os.path.join(sniff_dir, f"{filename}.yaml")
+
+    file_path = os.path.join(root_dir, f"{filename}.yaml")
 
     biz_file_path = os.path.join(root_dir, "biz_data.yaml")
 
@@ -50,7 +55,7 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
         # 复制common_example.yaml, 作为common.yaml的模板
         shutil.copyfile(os.path.join(root_dir, f"common_example.yaml"), common_path)
 
-    if not os.path.exists(path):
+    if not os.path.exists(file_path):
         msg = f"【{task_name}任务】配置文件不存在\n> 提示: 请在config文件夹下创建{filename}.yaml（参考{filename}_example.yaml文件）\n> 路径：{example_file_path}"
         raise FileNotFoundError(msg)
 
@@ -61,14 +66,19 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
             msg = f"【{task_name}任务】配置文件内容有误\n> 参考内容：{filename}_example.yaml\n> 路径：{example_file_path}"
             raise ValueError(msg)
 
-    with open(path, "r", encoding="utf-8") as fp:
+    with open(file_path, "r", encoding="utf-8") as fp:
         data = yaml.safe_load(fp)
 
     if data is None:
         msg = f"【{task_name}任务】配置文件内容为空\n> 参考内容：{filename}_example.yaml\n> 路径：{example_file_path}"
         raise ValueError(msg)
     else:
+        sniff_data = {}
+        if os.path.exists(sniff_file_path):
+            with open(sniff_file_path, "r", encoding="utf-8") as fp:
+                sniff_data = yaml.safe_load(fp)
         config_data = data if config_data is None else config_data
+        data.get("account_data", {}).update(sniff_data.get("account_data", {}))
         config_data.update(data)
         if (old_biz_data := config_data.get("biz_data")) and biz_data is not None:
             old_biz_data.extend(biz_data)
@@ -76,7 +86,7 @@ def __load_config(task_name: str, filename: str, model: Type[BaseModel], **kwarg
         else:
             config_data['biz_data'] = biz_data
 
-    return model(**config_data, source=path, **kwargs)
+    return model(**config_data, source=file_path, **kwargs)
 
 
 def load_mmkk_config() -> MMKKConfig:
@@ -230,3 +240,7 @@ def store_detected_data(new_data: set, old_data: set = None):
         return True
     except (IOError, yaml.YAMLError) as e:
         print(f"检测数据更新失败: {e}")
+
+
+if __name__ == '__main__':
+    print(load_mmkk_config().account_data)
